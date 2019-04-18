@@ -1,0 +1,102 @@
+# Copyright (C) 2019  Stefan Vargyas
+# 
+# This file is part of Html-Cref.
+# 
+# Html-Cref is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# Html-Cref is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with Html-Cref.  If not, see <http://www.gnu.org/licenses/>.
+
+#
+# HTML char ref modules test suite:
+#
+
+$ . ~/regtest2.sh
+$ alias html-cref-modules-regtest='regtest2-selftest -f test-modules.txt -a exec=pipe -B'
+
+# output all test names:
+$ html-cref-modules-regtest -N
+...
+
+# run all tests:
+$ html-cref-modules-regtest -A
+...
+
+--[ prereq ]--------------------------------------------------------------------
+
+$ shopt -s extglob
+$ . test-funcs.sh
+$
+
+--[ trie ]----------------------------------------------------------------------
+
+$ validate-names trie
+$ validate-names -r trie
+$ validate-strict-prefixes trie
+$ validate-strict-prefixes -r trie
+$ test-crefs trie
+$
+
+--[ itrie ]---------------------------------------------------------------------
+
+$ validate-names itrie
+$ validate-names -r itrie
+$ validate-strict-prefixes itrie
+$ validate-strict-prefixes -r itrie
+$ test-crefs itrie
+$
+
+--[ etrie ]---------------------------------------------------------------------
+
+$ validate-names etrie
+$ validate-names -r etrie
+$ validate-strict-prefixes etrie
+$ validate-strict-prefixes -r etrie
+$ test-crefs etrie
+$
+
+--[ wtrie ]---------------------------------------------------------------------
+
+$ validate-names wtrie
+$ validate-names -r wtrie
+$ validate-strict-prefixes wtrie
+$ validate-strict-prefixes -r wtrie
+$ test-crefs wtrie
+$
+
+--[ ietrie ]--------------------------------------------------------------------
+
+$ validate-names ietrie
+$ validate-names -r ietrie
+$ validate-strict-prefixes ietrie
+$ validate-strict-prefixes -r ietrie
+$ test-crefs ietrie
+$
+
+--[ iwtrie ]--------------------------------------------------------------------
+
+$ validate-names iwtrie
+$ validate-names -r iwtrie
+$ validate-strict-prefixes iwtrie
+$ validate-strict-prefixes -r iwtrie
+$ test-crefs iwtrie
+$
+
+--[ re2c ]----------------------------------------------------------------------
+
+$ validate-names re2c
+$ validate-names -r re2c
+$ validate-strict-prefixes re2c
+$ validate-strict-prefixes -r re2c
+$ test-crefs re2c
+$
+
+

@@ -1,0 +1,312 @@
+
+                                    Html-Cref
+                                    ~~~~~~~~~
+                        Stefan Vargyas, stvar@yahoo.com
+
+                                  Apr 11, 2019
+
+
+Table of Contents
+-----------------
+
+0. Copyright
+1. The Html-Cref Program
+2. Building and Testing Html-Cref
+3. Running Timings of Html-Cref's Parsers
+4. Appendix: Using Shell Function 'html-cref-test'
+5. References
+
+
+0. Copyright
+============
+
+This program is GPL-licensed free software. Its author is Stefan Vargyas. You
+can redistribute it and/or modify it under the terms of the GNU General Public
+License as published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+You should have received a copy of the GNU General Public License along with
+this program (look up for the file COPYING in the top directory of the source
+tree). If not, see http://gnu.org/licenses/gpl.html.
+
+The source tree of Html-Cref includes source files from another free software
+project: Json-Type [3]. These source files were placed in a separate directory,
+'lib/json-type'. Each such Json-Type source file contains unaltered the original
+copyright and license notices.
+
+
+1. The Html-Cref Program
+========================
+
+Html-Cref's vocation is that of a fast HTML character references decoder [1a].
+
+Html-Cref is implementing several fast HTML character references parsers based
+on two meta-tools: Trie-Gen [5] and RE2C [4]. The parsing and decoding of HTML
+character references follow carefully the HTML standard specification, handling
+properly those named references that, for historical reasons, are allowed to not
+be terminated with semicolon [1b].
+
+Html-Cref produces output encoded in UTF-8 that is conforming to the Unicode
+Standard v12.0.0 [2], handling correctly both BMP and non-BMP (the so-called
+Astral planes) code points.
+
+
+2. Building and Testing Html-Cref
+=================================
+
+Html-Cref is written in modern C and was developed under a GNU/Linux environment
+using the GCC C compiler v4.3.4 and v7.2.0. This latter version is the newest
+GCC with which Html-Cref was tested: passing to GCC the option `-std=gnu11', it
+builds Html-Cref cleanly.
+
+Note that the two meta-tools mentioned in section 1 (Trie-Gen and RE2C) are not
+needed for building Html-Cref. All the C code that these programs generated is
+included within the source tree in the files 'src/html-cref-!(table)-impl.h'.
+
+Html-Cref is supposed to be built in two distinct ways -- determined by specific
+arguments passed to the 'make' program. The first way is to have each HTML named
+character reference parser be compiled separately as a dynamic library (a shared
+object) and have the main program, 'html-cref' load an actual parser dynamically
+at run time (the parser gets specified through 'html-cref's command line options
+`-p|--cref-parser=$NAME'):
+
+  $ make [OPT=$OPT] [TIMINGS=no|yes]
+
+The other alternative is to have 'html-cref' be a standalone program that does
+not depend on external parser libraries. The main program is built such that to
+include only one specified parser:
+
+  $ make [OPT=$OPT] BUILTIN=$NAME
+
+The above `$NAME' can be one of following: ietrie, iwtrie, itrie, etrie, wtrie,
+trie or re2c. The argument of form `OPT=$OPT' asks GCC to do optimization of the
+binaries it produces according to the optimization level option `-O$OPT'.
+
+The received package comes along with a comprehensive test-suite contained in
+'test' directory. The shell script 'test/test.sh' starts the test-suite and it
+can be invoked simply by issuing:
+
+  $ make test
+
+The main test script 'test/test.sh' invokes one of the two top shell scripts
+'test/test-{builtin,modules}.sh'; subsequently, each is calling for the inner
+scripts placed in the sub-directories of 'test'. All these are 'bash' scripts
+which depend upon a handful of power-tools commonly found on every GNU/Linux
+installation.  The 'test' directory contains also the source files from which
+the test scripts were generated: the files 'test/test-{builtin,modules}.txt'.
+
+Upon running 'test/test.sh', the output obtained from the shell script would
+be a short series of lines of the kind:
+
+  test: GROUP:CASE RESULT
+
+GROUP is the name of the group of tests located in the directory 'test/GROUP',
+CASE is the name of the test case and RESULT is either 'OK' or 'failed'. The
+expected behavior would be that of all test cases to succeed. In the case of
+things going the wrong way for a particular test case, more verbose output is
+obtainable when running the corresponding 'test/GROUP/test-CASE.sh' script on
+its own. It'll produce a diff between expected and actual output of 'html-cref'.
+
+Note that any user's explicit invocation of these 'bash' test scripts must be
+initiated from within the 'test' directory.
+
+A common scenario is for one to have Html-Cref built in three steps. Firstly, do
+built the program along with external parser modules, enabling the timings code
+within each of these modules:
+
+  $ make OPT=3 TIMINGS=yes
+
+Second step: run the timings measurements described in the next section for to
+determine the parser module to be built into the standalone 'html-cref' program.
+
+Third step: build 'html-cref' with one's chosen parser module included as such:
+
+  $ make allclean
+
+  $ make OPT=3 BUILTIN=...
+
+
+3. Running Timings of Html-Cref's Parsers
+=========================================
+
+This section shows how to run timings measurements of 'html-cref's HTML named
+character references parsers.
+
+Let point out that the timings below are to be obtained upon running Html-Cref's
+parser libraries on a test file that contain all the 2125 valid named character
+references repeatedly, for to amount 272000 of them disposed in random order.
+
+  $ cd test
+
+  $ wc -l < html-cref-names.txt
+  2125
+
+  $ test-html-crefs() {
+    local k
+    for ((k=0; k<128; k++)); do
+        cat html-cref-names.txt
+    done|
+    shuf|
+    sed 's/^/\&/;s/$/;/'|
+    tr -d '\n'
+  }
+
+  $ test-html-crefs > test-html-crefs.txt
+
+The first thing to do is to build optimized binaries with timings code enabled:
+
+  $ cd src
+
+  $ make OPT=3 TIMINGS=yes -B 
+
+  $ strip *.so html-cref
+
+  $ du -sbh *.so html-cref|sort -k1hr,1
+  150K	html-cref-re2c.so
+  138K	html-cref-etrie.so
+  138K	html-cref-ietrie.so
+  138K	html-cref-iwtrie.so
+  138K	html-cref-wtrie.so
+  130K	html-cref-itrie.so
+  130K	html-cref-trie.so
+  43K	html-cref
+
+Then run the shell function 'html-cref-test' sourced in the current environment
+from the 'bash' shell script 'src/html-cref.sh'. (See the appendix section below
+for the details of how 'html-cref-test' is functioning.) The shell function will
+be invoked on the test file 'test/test-html-crefs.txt', asking it to produce the
+timings output both on stdout and in a text file. The name of the output file is
+based on the name of shell function's input file. In this case, the name of the
+output file would be 'test/test-html-crefs.output'.
+
+  $ . html-cref.sh
+
+  $ html-cref-test -i ../test/test-html-crefs.txt -o+ -T+
+  ...
+
+Upon running shell function 'html-cref-test' as above on a GNU/Linux 64-bit Intel
+Core I5-3210M (Ivy Bridge) CPU machine, the timings data expressed as percentage
+values relative to those of parser library 'html-cref-ietrie.so' would look like:
+
+  $ html-cref-test -i ../test/test-html-crefs.output -P ietrie
+  ietrie: 100   0.00   0.00   0.00
+  iwtrie: 100   0.04   0.24   0.10
+  wtrie:  100   0.65   0.52   0.70
+  etrie:  100   0.67   0.53   0.47
+  re2c:   100   2.21   2.05   1.82
+  itrie:  100   2.22   2.05   2.04
+  trie:   100   2.95   2.57   2.23
+
+
+4. Appendix: Using Shell Function 'html-cref-test'
+==================================================
+
+The 'bash' shell function 'html-cref-test' was conceived as a tool that one
+should use for to obtain aggregated timings information upon running series
+of 'html-cref' program instances. The program 'html-cref' produces timings
+data that amounts to the time its HTML named character reference parsers do
+spend processing a given input text.
+
+For using 'html-cref-test', one has to source in the current 'bash' environment
+the shell script 'src/'html-cref.sh':
+
+  $ cd src
+
+  $ . html-cref.sh
+
+The command line options of 'html-cref-test' are as shown below:
+
+  $ funchelp -f html-cref.sh -c html-cref-test --long-wrap-join=auto
+  actions:
+    -N|--names             print out the names of known HTML char ref parsers
+    -T|--test-set[=NAMES]  test named HTML char ref parsers; NAMES is a
+                             comma-separated list of HTML char ref parser names
+                             (default: '+', i.e. all)
+    -P|--percents[=NAME]   process percents relative to the specified HTML char
+                             ref parser (default: '+' , i.e. 'ietrie')
+  options:
+    -f|--overwrite         force overwriting the output timings file if that
+                             already exists when action is `-S|--test-set'
+    -g|--group             group by names and sum up timings of input table when
+                             action is `-P|--percents'
+    -i|--input=FILE        input test file when action is `-T|--test-set' or
+                             input timings file when action is `-P|--percents'
+    -o|--output=FILE       output timings file when action is `-T|--test-set';
+                             '-' means to not generate such file at all
+                             (default); '+[SUFFIX]' stands for computing a name
+                             based on the input test file name: replace FILE's
+                             shortest `.' suffix with `.output[.SUFFIX]'); note
+                             that regardless of the argument these options have,
+                             the timings table is printed out on stdout
+    -r|--repeat=NUM        number of times to repeat the 'html-cref' command
+                             (default: 100)
+    -w|--width=NUM         width of timings columns' integral part when action is
+                             `-T|--test-set' (default: 9)
+
+As seen above, 'html-cref-test' has three modes of operation, corresponding each
+to one of its action options. The action options determines the action taken by
+the script and the output obtained from it.
+
+In case of action options `-N|--names' there's nothing to add to the description
+text above.
+
+The action options `-T|--test-set' expects to find a binary 'html-cref' along
+with all the shared libs of form 'html-cref-NAME.so', where 'NAME' is one of
+the names printed out by action options `-N|--names' -- each built with the
+timings code enabled and located in the current directory from which the shell
+script 'html-cref-test' is invoked.
+
+The result obtained from `-T|--test-set' is a table of which rows are of form:
+
+  NAME: COUNT REAL PROCESS THREAD
+
+where 'NAME' is one of the name that was given as argument to the action option
+itself; 'COUNT' is the number of times the command 'html-cref' was issued using
+the parser library named by 'NAME'; 'COUNT' is controlled by 'html-cref-test's
+option `-r|--repeat' and has the default value 100.
+
+The last three columns of the table obtained from `-T--test-set' are mean values
+of the total of real, process and, respectively, thread nanoseconds spent by the
+parser library named by 'NAME' inside the HTML named character references parser
+function that it implements. The real, process and thread nanoseconds values are
+computed using the library function `clock_gettime(3)' -- which is called on the
+clock ids 'CLOCK_{REALTIME,PROCESS_CPUTIME_ID,THREAD_CPUTIME_ID}' respectively.
+
+The action options `-P|--percents' take as input a table obtained from action
+options `-T|--test-set' for to transform the nanoseconds values to percentage
+values relative to the corresponding nanoseconds value on the table's row that
+is specified as argument of the action option itself. Prior to printing it out,
+these action options do sort the resulting table on the third column, the REAL
+timings column.
+
+
+5. References
+=============
+
+Internet Resources:
+
+[1] HTML Living Standard -- Last Updated 11 April 2019
+    https://html.spec.whatwg.org/multipage/index.html
+
+    (a) 12 The HTML syntax: 12.1.4 Character references
+    https://html.spec.whatwg.org/multipage/syntax.html#character-references
+
+    (b) 12.2 Parsing HTML documents: 12.2.5.73 Named character reference state
+    https://html.spec.whatwg.org/multipage/parsing.html#named-character-reference-state
+
+[2] The Unicode Standard Version 12.0 -- Core Specification
+    Chapter 3: 3.9 Unicode Encoding Forms: UTF-8, p. 125
+    http://www.unicode.org/versions/Unicode12.0.0/ch03.pdf
+
+Free or Open-Source Software:
+
+[3] Json-Type: JSON Push Parsing and Type Checking
+    http://nongnu.org/json-type/
+
+[4] RE2C: A Lexer Generator for C and C++
+    http://re2c.org/index.html
+
+[5] Trie-Gen: Trie Lookup Code Generator
+    http://nongnu.org/trie-gen/
+
+

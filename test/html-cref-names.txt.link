@@ -1,0 +1,1 @@
+$ (cd ../src && . html-cref.sh && html-cref-gen --cref-names) > html-cref-names.txt

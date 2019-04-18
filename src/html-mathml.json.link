@@ -1,0 +1,11 @@
+# XML Entity Definitions for Characters (2nd Edition)
+# W3C Recommendation 10 April 2014
+# 2 Sets of names > 2.1 The HTML MathML entity set:
+# https://www.w3.org/TR/2014/REC-xml-entity-names-20140410/
+
+# XML Entity Definitions for Characters (3rd Edition)
+# W3C Working Draft 21 June 2015
+# 2 Sets of names > 2.1 The HTML MathML entity set:
+# https://www.w3.org/2003/entities/2007doc/
+
+$ wget -O html-mathml.json https://www.w3.org/2003/entities/2007/htmlmathml.json
