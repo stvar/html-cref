@@ -167,8 +167,8 @@ struct options_t
 
 static void options_version(void)
 {
-    fprintf(stdout,
-        "%s: version %s\n", program, verdate);
+    fprintf(stdout, "%s: version %s\n\n%s",
+        program, verdate, license);
 }
 
 static void options_usage(void)
