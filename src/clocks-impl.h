@@ -140,9 +140,6 @@ static ALWAYS_INLINE struct clocks_t
     ntime_clocks(
         const struct ntime_t* time)
 {
-#ifdef CLOCKS_NEED_CHILDREN_TIME
-    struct clocks_time_t t;
-#endif
     struct clocks_t r;
     struct ntime_t t;
 
