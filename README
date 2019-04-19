@@ -208,7 +208,7 @@ data that amounts to the time its HTML named character reference parsers do
 spend processing a given input text.
 
 For using 'html-cref-test', one has to source in the current 'bash' environment
-the shell script 'src/'html-cref.sh':
+the shell script 'src/html-cref.sh':
 
   $ cd src
 
@@ -235,7 +235,7 @@ The command line options of 'html-cref-test' are as shown below:
                              '-' means to not generate such file at all
                              (default); '+[SUFFIX]' stands for computing a name
                              based on the input test file name: replace FILE's
-                             shortest `.' suffix with `.output[.SUFFIX]'); note
+                             shortest `.' suffix with `.output[.SUFFIX]'; note
                              that regardless of the argument these options have,
                              the timings table is printed out on stdout
     -r|--repeat=NUM        number of times to repeat the 'html-cref' command
