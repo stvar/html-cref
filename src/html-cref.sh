@@ -661,7 +661,7 @@ html-cref-test()
     local f=""      # force overwriting the output timings file if that already exists when action is `-S|--test-set' (--overwrite)
     local g=""      # group by names and sum up timings of input table when action is `-P|--percents' (--group)
     local i=""      # input test file when action is `-T|--test-set' or input timings file when action is `-P|--percents' (--input=FILE)
-    local o="-"     # output timings file when action is `-T|--test-set'; '-' means to not generate such file at all (default); '+[SUFFIX]' stands for computing a name based on the input test file name: replace FILE's shortest `.' suffix with `.output[.SUFFIX]'); note that regardless of the argument these options have, the timings table is printed out on stdout (--output=FILE)
+    local o="-"     # output timings file when action is `-T|--test-set'; '-' means to not generate such file at all (default); '+[SUFFIX]' stands for computing a name based on the input test file name: replace FILE's shortest `.' suffix with `.output[.SUFFIX]'; note that regardless of the argument these options have, the timings table is printed out on stdout (--output=FILE)
     local r="+"     # number of times to repeat the 'html-cref' command (default: 100) (--repeat=NUM)
     local w="+"     # width of timings columns' integral part when action is `-T|--test-set' (default: 9) (--width=NUM)
 
