@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Html-Cref.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef __HTML_CREF_UTF_H
-#define __HTML_CREF_UTF_H
+#ifndef __HTML_CREF_UNICODE_H
+#define __HTML_CREF_UNICODE_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -32,6 +32,6 @@ typedef unsigned char utf8_t[4];
 
 size_t html_cref_unicode_encode_utf8(code_point_t, utf8_t);
 
-#endif /* HTML_CREF_UNICODE_H */
+#endif /* __HTML_CREF_UNICODE_H */
 
 
