@@ -104,7 +104,7 @@ function gen_re2c_entry(n, o)
 BEGIN {
     if (act == "gen-re2c-def") {
         printf("/*!re2c\n")
-        printf("\tre2c:define:YYCTYPE = char;\n")
+        printf("\tre2c:define:YYCTYPE = uchar_t;\n")
         printf("\tre2c:yyfill:enable = 0;\n")
         printf("\tre2c:indent:top = 1;\n\n")
     }

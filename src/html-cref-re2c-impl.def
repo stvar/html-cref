@@ -21,7 +21,7 @@
 //
 
 /*!re2c
-    re2c:define:YYCTYPE = char;
+    re2c:define:YYCTYPE = uchar_t;
     re2c:yyfill:enable = 0;
     re2c:indent:top = 1;
 
