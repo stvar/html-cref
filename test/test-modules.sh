@@ -48,6 +48,7 @@ for t in \
     wtrie \
     ietrie \
     iwtrie \
+    bre2c \
     re2c
 do
     test -z "$q" &&

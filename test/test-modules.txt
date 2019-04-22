@@ -90,6 +90,15 @@ $ validate-strict-prefixes -r iwtrie
 $ test-crefs iwtrie
 $
 
+--[ bre2c ]---------------------------------------------------------------------
+
+$ validate-names bre2c
+$ validate-names -r bre2c
+$ validate-strict-prefixes bre2c
+$ validate-strict-prefixes -r bre2c
+$ test-crefs bre2c
+$
+
 --[ re2c ]----------------------------------------------------------------------
 
 $ validate-names re2c

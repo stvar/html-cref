@@ -646,7 +646,7 @@ echo
 html-cref-test()
 {
     local self="html-cref-test"
-    local tstl='itrie etrie wtrie ietrie iwtrie re2c trie'
+    local tstl='itrie etrie wtrie ietrie iwtrie bre2c re2c trie'
     local tsto="${tstl// /|}"
     local tsts="@($tsto)*(,@($tsto))"
     local defP='ietrie'

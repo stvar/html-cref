@@ -27,6 +27,7 @@ MODULES := ietrie \
            etrie \
            wtrie \
            trie \
+           bre2c \
            re2c
 
 JSON_TYPE_HOME := ../lib/json-type
