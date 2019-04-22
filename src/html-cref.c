@@ -673,7 +673,7 @@ static void process_subst_cref(
 
     ASSERT(buf[len] == 0);
 
-    while ((q = strchr(p, '&'))) {
+    while ((q = memchr(p, '&', l))) {
         d = PTR_DIFF(q, p);
         if (FLAGS_HAS(print_output))
             fwrite(p, 1, d, stdout);
