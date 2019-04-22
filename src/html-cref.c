@@ -59,7 +59,7 @@
 const char stdin_name[] = "<stdin>";
 
 const char program[] = STRINGIFY(PROGRAM);
-const char verdate[] = "0.4 -- 2019-04-12 09:49"; // $ date +'%F %R'
+const char verdate[] = "0.5 -- 2019-04-21 15:12"; // $ date +'%F %R'
 
 const char license[] =
 "Copyright (C) 2019  Stefan Vargyas.\n"
