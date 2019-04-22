@@ -671,6 +671,8 @@ static void process_subst_cref(
     ASSERT(FLAGS_HAS_ONE(
         warn_invalid, print_output));
 
+    ASSERT(buf[len] == 0);
+
     while ((q = strchr(p, '&'))) {
         d = PTR_DIFF(q, p);
         if (FLAGS_HAS(print_output))

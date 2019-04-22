@@ -49,7 +49,7 @@ static bool file_buf_read_at_once(struct file_buf_t* buf,
         return false;
     }
 
-    buf->ptr = malloc(buf->size);
+    buf->ptr = malloc(SIZE_INC(buf->size));
     ENSURE(buf->ptr != NULL, "malloc failed");
 
     n = read(fd, buf->ptr, buf->size);
@@ -57,6 +57,7 @@ static bool file_buf_read_at_once(struct file_buf_t* buf,
         FILE_BUF_SYS_ERROR(read, errno);
         return false;
     }
+    buf->ptr[buf->size] = 0;
 
     return true;
 }
@@ -80,7 +81,7 @@ static bool file_buf_read_at_once(struct file_buf_t* buf,
 static bool file_buf_read_incremental(struct file_buf_t* buf,
     int fd)
 {
-    const size_t sz = 1024; // stev: maybe: sz = buf->io_size ?
+    const size_t sz = 16 * 1024;
     char c[sz];
 
     uchar_t* b = NULL;
@@ -118,7 +119,10 @@ static bool file_buf_read_incremental(struct file_buf_t* buf,
         d += r;
     }
 
-    if (d) FILE_BUF_REALLOC(b, d);
+    ASSERT_SIZE_INC_NO_OVERFLOW(d);
+    FILE_BUF_REALLOC(b, d + 1);
+    b[d] = 0;
+
     buf->size = d;
     buf->ptr = b;
     return true;

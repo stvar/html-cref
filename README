@@ -14,7 +14,8 @@ Table of Contents
 2. Building and Testing Html-Cref
 3. Running Timings of Html-Cref's Parsers
 4. Appendix: Using Shell Function 'html-cref-test'
-5. References
+5. Appendix: Links to Json-Type
+6. References
 
 
 0. Copyright
@@ -280,7 +281,42 @@ these action options do sort the resulting table on the third column, the REAL
 timings column.
 
 
-5. References
+5. Appendix: Links to Json-Type
+===============================
+
+The file 'lib/json-type-files.txt' lists the SHA1 hashes of the original files
+brought in 'lib' directory from Json-Type's 'git' repository:
+
+  $ cat lib/json-type-files.txt 
+  231c047b8ab51ab957535c2d8aab3d788cbabbd4  char-traits.h
+  56478925b560a095ef5caed4cc4602bfc96c51f3  config.h
+  ...
+
+The command below shows which of these source files are modified versions of the
+original ones. Note that '$JSON_TYPE_HOME' is the path to the directory hosting
+Json-Type's local 'git' repository. Json-Type's public 'git' repository URL is
+given under reference entry [3].
+
+  $ . src/html-cref.sh
+
+  $ git-repo-diff -g $JSON_TYPE_HOME|lsdiff -s
+  ! lib/file-buf.c
+
+Note that 'git-repo-diff' expects to be issued from within the top directory of
+the source tree. Its command line options are as follows:
+
+  $ funchelp -f html-cref.sh -c git-repo-diff --long-wrap-join=auto
+    -b|--ignore-space-change  pass '-b|--ignore-space-change' to diff
+    -h|--home=DIR             home dir (default: '.')
+    -g|--git-dir=DIR          'git' repo directory (default: '$HOME/$target')
+    -s|--sha1-hashes=FILE     sha1 hashes file name ('-' means stdin, the default
+                                is '$home/lib/$target-files.txt')
+    -t:|--target=NAME         target name: 'json-type'
+        --json-type
+    -u|--unified=NUM          pass '-u|--unified=NUM' to diff
+
+
+6. References
 =============
 
 Internet Resources:
@@ -302,6 +338,9 @@ Free or Open-Source Software:
 
 [3] Json-Type: JSON Push Parsing and Type Checking
     http://nongnu.org/json-type/
+
+    Json-Type's Public 'git' Repository:
+    git://git.sv.nongnu.org/json-type
 
 [4] RE2C: A Lexer Generator for C and C++
     http://re2c.org/index.html

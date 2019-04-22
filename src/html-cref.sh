@@ -978,3 +978,179 @@ sort -k1,1'
     $x "$c"
 }
 
+git-repo-diff()
+{
+    local self="git-repo-diff"
+    local trgx='@(json-type)'
+    local deft='json-type'
+
+    local x="eval"
+    local b=""          # pass '-b|--ignore-space-change' to diff (--ignore-space-change)
+    local h="+"         # home dir (default: '.') (--home=DIR)
+    local g="+"         # 'git' repo directory (default: '$HOME/$target') (--git-dir=DIR)
+    local s="+"         # sha1 hashes file name ('-' means stdin, the default is '$home/lib/$target-files.txt') (--sha1-hashes=FILE)
+    local t="+"         # target name: 'json-type' (--target=NAME|--json-type)
+    local u=""          # pass '-u|--unified=NUM' to diff (--unified=NUM)
+
+    local opt
+    local OPT
+    local OPTN
+    local opts=":bdg:h:s:t:u:x-:"
+    local OPTARG
+    local OPTERR=0
+    local OPTIND=1
+    while getopts "$opts" opt; do
+        # discriminate long options
+        optlong
+
+        # translate long options to short ones
+        test -n "$OPT" &&
+        case "$OPT" in
+            ignore-space-change)
+                opt='b' ;;
+            git-dir)
+                opt='g' ;;
+            home)
+                opt='h' ;;
+            sha1-hashes)
+                opt='s' ;;
+            target|$trgx)
+                opt='t' ;;
+            unified)
+                opt='u' ;;
+            *)	error --long -o
+                return 1
+                ;;
+        esac
+
+        # check long option argument
+        [[ "$opt" == [t] ]] ||
+        optlongchkarg ||
+        return 1
+
+        # handle short options
+        case "$opt" in
+            d)	x="echo"
+                ;;
+            x)	x="eval"
+                ;;
+            [ghs])
+                optarg
+                ;;
+            [b])
+                optopt
+                ;;
+            t)	[[ -n "$OPT" || "$OPTARG" == $trgx ]] || {
+                    error -i
+                    return 1
+                }
+                optlong -
+
+                [[ "${OPT:2}" == @(target|$trgx) ]] || {
+                    error --long -o
+                    return 1
+                }
+                case "${OPT:2}" in
+                    target)
+                        [ -n "$OPTN" ] || {
+                            error --long -a
+                            return 1
+                        }
+                        [[ "$OPTARG" == $trgx ]] || {
+                            error --long -i
+                            return 1
+                        }
+                        t="$OPTARG"
+                        ;;
+                    $trgx)
+                        [ -z "$OPTN" ] || {
+                            error --long -d
+                            return 1
+                        }
+                        t="${OPT:2}"
+                        ;;
+                    *)	error "internal: unexpected OPT='$OPT'"
+                        return 1
+                        ;;
+                esac
+                ;;
+            u)	[[ "$OPTARG" == +([0-9]) ]] || {
+                    error --long -i
+                    return 1
+                }
+                optarg
+                ;;
+            *)	error --long -g
+                return 1
+                ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+
+    [ -z "$h" ] && {
+        error "home dir cannot be null"
+        return 1
+    }
+    [ "$h" == '+' ] && h='.'
+    [ ! -d "$h" ] && {
+        error "home dir '$h' not found"
+        test "$x" == "eval" && return 1
+    }
+
+    [ "$t" == '+' ] && t="$deft"
+
+    [ -n "$g" ] || {
+        error "git directory cannot be null"
+        return 1
+    }
+    [ "$g" == '+' ] && g="$HOME/$t"
+    [ -d "$g" ] || {
+        error "git directory '$g' not found"
+        return 1
+    }
+    quote g
+
+    [ -n "$s" ] || {
+        error "sha1 hashes file name cannot be null"
+        return 1
+    }
+    [ "$s" == '-' ] && s=""
+    [ "$s" == '+' ] && s="$h/lib/$t-files.txt"
+    [ -z "$s" -o -f "$s" ] || {
+        error "sha1 hashes file '$s' not found"
+        return 1
+    }
+    quote s
+
+    local c="\
+git \\
+--git-dir=${g%%+(/)?(.git*(/))}/.git rev-parse \\
+--git-dir"
+    [ "$x" == "echo" ] && echo "$c"
+
+    local g2
+    g2="$(eval "$c")" && [ -n "$g2" ] || {
+        error "inner command failed: git" #!!! ${c//@(\\|$'\n')/}"
+        return 1
+    }
+    quote g2
+
+    local s2='/^[0-9a-f]{40}\s/p'
+    local f
+
+    c="\
+sed -nr '$s2'${s:+ \\
+$s}|
+while read h f; do
+    git --git-dir=$g2 cat-file -e \"\$h\" || {
+        error \"git object \$h not found\"
+        continue
+    }
+    diff -${b}u$u \\
+    -L \"\$f\" <(git --git-dir=$g2 cat-file -p \$h) \\
+    -L \"\$f\" \"lib/$t/\$f\"
+done"
+
+    $x "$c"
+}
+

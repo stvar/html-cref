@@ -1,0 +1,33 @@
+# Copyright (C) 2019  Stefan Vargyas
+# 
+# This file is part of Html-Cref.
+# 
+# Html-Cref is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# Html-Cref is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with Html-Cref.  If not, see <http://www.gnu.org/licenses/>.
+# 
+231c047b8ab51ab957535c2d8aab3d788cbabbd4  char-traits.h
+56478925b560a095ef5caed4cc4602bfc96c51f3  config.h
+85b2b57b873cc55a5b45e140b549ebf843224113  int-traits.h
+1b34661141299caae062fd5bf38608ded1a0246a  lib/dyn-lib.c
+6bac9c0f5953e821b537ab1bf49dd03822f8d4d1  lib/dyn-lib.h
+2e1ffb62b5f27c61bcfd51c1f52f08f40dfc5090  lib/file-buf.c
+998ec396505e4e2b3f2c7ad7a23671a0d4f71b6e  lib/file-buf.h
+e90ec48610c97eb66ef770a646f433560d7862c1  lib/json-defs.h
+a1d267c006fc6be2f40a1e42a63b85ece959585b  lib/json-utf8.h
+a0e0b5c983180871d5994256a26f14b2609d0886  lib/pretty-print.c
+84062c904d460d930689f9a5886a1dcd2791b7ad  lib/pretty-print.h
+2afd08b68dc8bee3d74bdf4d154b630aba4ace2f  lib/su-size-opt-impl.h
+88d8ff35e30e2815f3839efa9b684e905426063b  lib/su-size.c
+154386a800de00265e8e90f88402abd4fd488e39  lib/su-size.h
+053b59a86d0a239402b13480652c2efe3dc0ce09  lib/va-args.h
+b794e9348a29b55c0a14b4aeb05c896b77d97b0c  ptr-traits.h
