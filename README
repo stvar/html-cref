@@ -161,6 +161,9 @@ The first thing to do is to build optimized binaries with timings code enabled:
 
   $ make OPT=3 TIMINGS=yes -B 
 
+Upon building Html-Cref with GCC 7.2.0 on a GNU/Linux machine, the sizes of the
+binaries obtained are as shown:
+
   $ strip *.so html-cref
 
   $ du -sbh *.so html-cref|sort -k1hr,1
