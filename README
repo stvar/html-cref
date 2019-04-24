@@ -230,7 +230,7 @@ The command line options of 'html-cref-test' are as shown below:
                              ref parser (default: '+' , i.e. 'ietrie')
   options:
     -f|--overwrite         force overwriting the output timings file if that
-                             already exists when action is `-S|--test-set'
+                             already exists when action is `-T|--test-set'
     -g|--group             group by names and sum up timings of input table when
                              action is `-P|--percents'
     -i|--input=FILE        input test file when action is `-T|--test-set' or
