@@ -110,10 +110,13 @@ ${BIN}:
 ${MODS}: %.so: %.c
 	${GCC} ${CFLAGS} -DHTML_CREF_MODULE -lrt -shared $^ -o $@ 
 
+clocks: common.c clocks.c
+	${GCC} $(patsubst -DPROGRAM=%,-DPROGRAM=clocks,${CFLAGS}) -DMAIN -lrt $^ -o $@ 
+
 # main targets
 
 ifndef BUILTIN
-all: ${BIN} ${MODS}
+all: ${BIN} ${MODS} clocks
 else
 all: ${BIN}
 endif
@@ -122,7 +125,7 @@ clean:
 	rm -f *~
 
 allclean: clean
-	rm -f ${BIN} ${MODS}
+	rm -f ${BIN} ${MODS} clocks
 
 depend:
 	${GCC} ${CFLAGS} -c ${SRCS} -MM| \

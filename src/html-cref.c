@@ -59,7 +59,7 @@
 const char stdin_name[] = "<stdin>";
 
 const char program[] = STRINGIFY(PROGRAM);
-const char verdate[] = "0.5 -- 2019-04-21 15:12"; // $ date +'%F %R'
+const char verdate[] = "0.6 -- 2019-05-05 10:58"; // $ date +'%F %R'
 
 const char license[] =
 "Copyright (C) 2019  Stefan Vargyas.\n"
@@ -70,49 +70,59 @@ const char license[] =
 const char help[] = 
 "usage: %s [ACTION|OPTION]...\n"
 "where actions are specified as:\n"
-"  -S|--subst-cref          substitute all HTML char references in the\n"
-"                             given input file (default)\n"
-"  -P|--print-cref          print out the HTML char references for each\n"
-"                             named reference; take the names from the\n"
-"                             input file, each given on a separate line\n"
+"  -S|--subst-cref             substitute all HTML char references in the\n"
+"                                given input file (default)\n"
+"  -P|--print-cref             print out the HTML char references for each\n"
+"                                named reference; take the names from the\n"
+"                                input file, each given on a separate line\n"
 "the options are:\n"
-"  -f|--input-file=FILE     take input from the named file (the default\n"
-"                             is '-', aka stdin)\n"
-"  -t|--input-type=TYPE     process input file as specified by TYPE:\n"
-"                             'liner' for line-by-line operations, or\n"
-"                             'sponge' for operations applied at once\n"
-"                             on a buffer containing the whole input\n"
-"                             file; the default is 'liner'\n"
+"  -f|--input-file=FILE        take input from the named file (the default\n"
+"                                is '-', aka stdin)\n"
+"  -t|--input-type=TYPE        process input file as specified by TYPE:\n"
+"                                'liner' for line-by-line operations, or\n"
+"                                'sponge' for operations applied at once\n"
+"                                on a buffer containing the whole input\n"
+"                                file; the default is 'liner'\n"
 #ifndef BUILTIN
-"  -p|--cref-parser=NAME    use the specified HTML character reference\n"
-"                             parser: that is load the external module\n"
-"                             `html-cref-NAME.so' (a shared library)\n"
-"                             that defines proper parse functions\n"
-"                             (the default is 'ietrie')\n"
+"  -p|--cref-parser=NAME       use the specified HTML character reference\n"
+"                                parser: that is load the external module\n"
+"                                `html-cref-NAME.so' (a shared library)\n"
+"                                that defines proper parse functions\n"
+"                                (the default is 'ietrie')\n"
 #endif
-"  -e|--[no-]semicolons     when action is `-S|--subst-cref', require\n"
-"                             that all char references be terminated\n"
-"                             with semicolon -- even those that were\n"
-"                             allowed to the contrary for historical\n"
-"                             reasons (that is the default behavior)\n"
-"  -s|--sponge-max=NUM[KM]  the maximum size of the input buffer when\n"
-"                             the input type is 'sponge' (by default\n"
-"                             is 5M; not allowed to be more than 10M)\n"
+"  -e|--[no-]semicolons        when action is `-S|--subst-cref', require\n"
+"                                that all char references be terminated\n"
+"                                with semicolon -- even those that were\n"
+"                                allowed to the contrary for historical\n"
+"                                reasons (that is the default behavior)\n"
+"  -s|--sponge-max=NUM[KM]     the maximum size of the input buffer when\n"
+"                                the input type is 'sponge' (by default\n"
+"                                is 5M; not allowed to be more than 10M)\n"
 #ifdef TIMINGS
-"  -m|--[no-]timings        print out on stderr the total amount of\n"
-"                             nanoseconds spent by the HTML character\n"
-"                             reference parser (default do not)\n"
+"  -m|--timings[=NUM,NUM,NUM]  print out on stderr the total amount of\n"
+"     --real-timings[=NUM]       nanoseconds spent by the HTML character\n"
+"     --process-timings[=NUM]    reference parser (default do not); use\n"
+"     --thread-timings[=NUM]     the given three numbers as the amount of\n"
+"     --no-timings               nanoseconds of overhead per call of the C\n"
+"                                library function 'clock_gettime(3)'; NUM\n"
+"                                are decimal non-negative integers, each\n"
+"                                corresponding to one of the clock ids:\n"
+"                                CLOCK_REALTIME, CLOCK_PROCESS_CPUTIME_ID,\n"
+"                                and CLOCK_THREAD_CPUTIME_ID; the options\n"
+"                                `--{real,process,thread}-timings' are to\n"
+"                                be used to specify timings on subsets of\n"
+"                                the mentioned three clock types\n"
 #endif // TIMINGS
-"  -w|--warnings[-only]     print out a warning message on stderr for\n"
-"     --no-warnings           each invalid HTML char reference found\n"
-"                             in the input given (default not); the\n"
-"                             option `--warnings-only' prevents the\n"
-"                             program to produce anything, but these\n"
-"                             warning messages on stdout; `-w' cuts\n"
-"                             short option `--warnings-only'\n"
-"     --dump-options        print options and exit\n"
-"     --version             print version numbers and exit\n"
-"  -?|--help                display this help info and exit\n";
+"  -w|--warnings[-only]        print out a warning message on stderr for\n"
+"     --no-warnings              each invalid HTML char reference found\n"
+"                                in the input given (default not); the\n"
+"                                option `--warnings-only' prevents the\n"
+"                                program to produce anything, but these\n"
+"                                warning messages on stdout; `-w' cuts\n"
+"                                short option `--warnings-only'\n"
+"     --dump-options           print options and exit\n"
+"     --version                print version numbers and exit\n"
+"  -?|--help                   display this help info and exit\n";
 
 #ifndef BUILTIN
 static void error_fmt(const char* fmt, ...)
@@ -154,11 +164,11 @@ struct options_t
     const char*  cref_parser;
 #endif
     size_t       sponge_max;
-
-    bits_t       semicolons: 1;
 #ifdef TIMINGS
-    bits_t       timings: 1;
+    bits_t       timings: 3;
+    size_t       overhead[3];
 #endif
+    bits_t       semicolons: 1;
     bits_t       warnings: 2;
 
     size_t       argc;
@@ -174,6 +184,29 @@ static void options_version(void)
 static void options_usage(void)
 {
     fprintf(stdout, help, program);
+}
+
+#undef  CLOCK_TYPES_HAS
+#define CLOCK_TYPES_HAS(t) \
+    CLOCK_TYPES_HAS_(opts->timings, t)
+
+static char* options_dump_timings(
+    const struct options_t* opts)
+{
+    char* b = NULL;
+    size_t n = 0;
+    FILE* f;
+
+    if (opts->timings == 0)
+        return strdup("-");
+
+    f = open_memstream(&b, &n);
+    clocks_print_names(opts->timings, f);
+
+    fclose(f);
+    ASSERT(n > 0);
+
+    return b;
 }
 
 static void options_dump(const struct options_t* opts)
@@ -198,6 +231,9 @@ static void options_dump(const struct options_t* opts)
     };
     struct su_size_t sponge_su = su_size(
         opts->sponge_max);
+#ifdef TIMINGS
+    char b[128], *c;
+#endif
 
 #define NAME_(x, t)                  \
     ({                               \
@@ -208,6 +244,14 @@ static void options_dump(const struct options_t* opts)
 #define NNUL(x)  (opts->x ? opts->x : "-")
 #define NOYES(x) NAME_(x, noyes)
 #define ARRAY(x) NAME_(x, x)
+
+#ifdef TIMINGS
+    su_size_list_to_string(
+        b, ARRAY_SIZE(b), opts->overhead,
+        ARRAY_SIZE(opts->overhead),
+        ",", true);
+    c = options_dump_timings(opts);
+#endif
 
     fprintf(stdout,
         "action:      %s\n"
@@ -220,6 +264,7 @@ static void options_dump(const struct options_t* opts)
         "semicolons:  %s\n"
 #ifdef TIMINGS
         "timings:     %s\n"
+        "overhead:    %s\n"
 #endif
         "warnings:    %s\n"
         "argc:        %zu\n",
@@ -233,12 +278,16 @@ static void options_dump(const struct options_t* opts)
         sponge_su.su,
         NOYES(semicolons),
 #ifdef TIMINGS
-        NOYES(timings),
+        c, b,
 #endif
         ARRAY(warnings),
         opts->argc);
 
 #undef ARRAY
+
+#ifdef TIMINGS
+    free(c);
+#endif
 
     pretty_print_strings(stdout,
         PTR_CONST_PTR_CAST(opts->argv, char),
@@ -354,6 +403,47 @@ static const char*
 }
 #endif
 
+static size_t options_parse_overheads_optarg(
+    const char* opt_name, const char* opt_arg,
+    size_t* vals, size_t n_vals)
+{
+    size_t r;
+
+    ASSERT(n_vals == 3);
+
+    if (opt_arg == NULL) {
+        memset(vals, 0,
+            SIZE_MUL(sizeof(*vals), n_vals));
+        return clock_types_all;
+    }
+
+    if (!su_size_parse_list(
+            opt_arg, 0, 1000, ',',
+            vals, n_vals, NULL, NULL, &r))
+        options_invalid_opt_arg(opt_name, opt_arg);
+    ASSERT(r <= n_vals);
+
+    if (r < n_vals)
+        options_illegal_opt_arg(opt_name, opt_arg);
+
+    return clock_types_all;
+}
+
+static size_t options_parse_clock_overhead_optarg(
+    size_t clock, const char* opt_name, const char* opt_arg,
+    size_t* vals, size_t n_vals)
+{
+    ASSERT(n_vals == 3);
+    ASSERT(clock < 3);
+
+    vals[clock] = opt_arg != NULL
+        ? options_parse_size_optarg(opt_name, opt_arg,
+            0, 1000)
+        : 0;
+
+    return 1U << clock;
+}
+
 static const struct options_t* options(
     int argc, char* argv[])
 {
@@ -390,40 +480,46 @@ static const struct options_t* options(
         warnings_opt,
         no_semicolons_opt,
 #ifdef TIMINGS
+        real_timings_opt,
+        process_timings_opt,
+        thread_timings_opt,
         no_timings_opt,
 #endif
         no_warnings_opt,
     };
 
     static const struct option longs[] = {
-        { "subst-cref",    0,       0, subst_cref_act },
-        { "print-cref",    0,       0, print_cref_act },
-        { "input-file",    1,       0, input_file_opt },
-        { "input-type",    1,       0, input_type_opt },
+        { "subst-cref",      0,       0, subst_cref_act },
+        { "print-cref",      0,       0, print_cref_act },
+        { "input-file",      1,       0, input_file_opt },
+        { "input-type",      1,       0, input_type_opt },
 #ifndef BUILTIN
-        { "cref-parser",   1,       0, cref_parser_opt },
+        { "cref-parser",     1,       0, cref_parser_opt },
 #endif
-        { "sponge-max",    1,       0, sponge_max_opt },
-        { "semicolons",    0,       0, semicolons_opt },
-        { "no-semicolons", 0,       0, no_semicolons_opt },
+        { "sponge-max",      1,       0, sponge_max_opt },
+        { "semicolons",      0,       0, semicolons_opt },
+        { "no-semicolons",   0,       0, no_semicolons_opt },
 #ifdef TIMINGS
-        { "timings",       0,       0, timings_opt },
-        { "no-timings",    0,       0, no_timings_opt },
+        { "timings",         1,       0, timings_opt },
+        { "real-timings",    2,       0, real_timings_opt },
+        { "process-timings", 2,       0, process_timings_opt },
+        { "thread-timings",  2,       0, thread_timings_opt },
+        { "no-timings",      0,       0, no_timings_opt },
 #endif
-        { "warnings",      0,       0, warnings_opt },
-        { "warnings-only", 0,       0, warnings_only_opt },
-        { "no-warnings",   0,       0, no_warnings_opt },
-        { "dump-options",  0,       0, dump_opt },
-        { "version",       0,       0, version_opt },
-        { "help",          0, &optopt, help_opt },
-        { 0,               0,       0, 0 }
+        { "warnings",        0,       0, warnings_opt },
+        { "warnings-only",   0,       0, warnings_only_opt },
+        { "no-warnings",     0,       0, no_warnings_opt },
+        { "dump-options",    0,       0, dump_opt },
+        { "version",         0,       0, version_opt },
+        { "help",            0, &optopt, help_opt },
+        { 0,                 0,       0, 0 }
     };
-    static const char shorts[] = "PS" "ef:s:t:w"
+    static const char shorts[] = ":" "PS" "ef:s:t:w"
 #ifndef BUILTIN
         "p:"
 #endif
 #ifdef TIMINGS
-        "m"
+        "m:"
 #endif
     ;
     struct bits_opts_t
@@ -501,10 +597,27 @@ static const struct options_t* options(
             break;
 #ifdef TIMINGS
         case timings_opt:
-            opts.timings = true;
+            opts.timings = options_parse_overheads_optarg(
+                "timings", optarg, opts.overhead,
+                ARRAY_SIZE(opts.overhead));
+            break;
+        case real_timings_opt:
+            opts.timings |= options_parse_clock_overhead_optarg(
+                clock_type_real, "real-timings", optarg,
+                opts.overhead, ARRAY_SIZE(opts.overhead));
+            break;
+        case process_timings_opt:
+            opts.timings |= options_parse_clock_overhead_optarg(
+                clock_type_process, "process-timings", optarg,
+                opts.overhead, ARRAY_SIZE(opts.overhead));
+            break;
+        case thread_timings_opt:
+            opts.timings |= options_parse_clock_overhead_optarg(
+                clock_type_thread, "thread-timings", optarg,
+                opts.overhead, ARRAY_SIZE(opts.overhead));
             break;
         case no_timings_opt:
-            opts.timings = false;
+            opts.timings = 0;
             break;
 #endif
         case warnings_only_opt:
@@ -643,6 +756,10 @@ static void process_cref_warn(
     fputs("'\n", f);
 }
 
+#ifdef TIMINGS
+static size_t process_cref_count = 0;
+#endif
+
 #ifndef BUILTIN
 typedef
     int (*process_cref_func_t)(const char*);
@@ -714,6 +831,9 @@ static void process_subst_cref(
             bool b;
             int i;
 
+#ifdef TIMINGS
+            process_cref_count ++;
+#endif
             if ((i = process_cref(q + 1)) < 0) {
                 if (FLAGS_HAS(warn_invalid))
                     process_cref_warn(
@@ -1223,16 +1343,36 @@ static void module_lib_done(
 #ifdef TIMINGS
 struct clocks_t clocks;
 
-static void timings_init(void)
+static void timings_init(
+    const struct options_t* opts)
 {
-    clocks_init(&clocks);
+    clocks_init(&clocks, opts->timings);
+}
+
+static void timings_adjust(
+    const struct options_t* opts)
+{
+    struct clocks_t o;
+
+    STATIC(
+        ARRAY_SIZE(opts->overhead) == 3);
+    STATIC(
+        SIZE_MAX <= CLOCKS_TIME_MAX);
+
+    o.types = clocks.types;
+    o.real = opts->overhead[0];
+    o.process = opts->overhead[1];
+    o.thread = opts->overhead[2];
+
+    clocks_adjust(
+        &clocks, &o, process_cref_count);
 }
 
 static void timings_print(void)
 {
     clocks_print(
         &clocks, "timings", 15,
-        true, stderr);
+        stderr);
 }
 #endif // TIMINGS
 
@@ -1277,7 +1417,7 @@ int main(int argc, char* argv[])
 
 #ifdef TIMINGS
     if (opts->timings)
-        timings_init();
+        timings_init(opts);
 #endif
 
     input_init(&input, opts);
@@ -1290,8 +1430,10 @@ int main(int argc, char* argv[])
     input_done(&input);
 
 #ifdef TIMINGS
-    if (opts->timings)
+    if (opts->timings) {
+        timings_adjust(opts);
         timings_print();
+    }
 #endif
 
 #ifndef BUILTIN

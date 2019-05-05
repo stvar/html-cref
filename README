@@ -167,7 +167,7 @@ binaries obtained are as shown:
   $ strip *.so html-cref
 
   $ du -sbh *.so html-cref|sort -k1hr,1
-  150K	html-cref-re2c.so
+  154K	html-cref-re2c.so
   138K	html-cref-etrie.so
   138K	html-cref-ietrie.so
   138K	html-cref-iwtrie.so
@@ -175,7 +175,7 @@ binaries obtained are as shown:
   134K	html-cref-bre2c.so
   130K	html-cref-itrie.so
   130K	html-cref-trie.so
-  43K	html-cref
+  51K	html-cref
 
 Then run the shell function 'html-cref-test' sourced in the current environment
 from the 'bash' shell script 'src/html-cref.sh'. (See the appendix section below
@@ -187,22 +187,22 @@ output file would be 'test/test-html-crefs.output'.
 
   $ . html-cref.sh
 
-  $ html-cref-test -i ../test/test-html-crefs.txt -o+ -T+
+  $ html-cref-test -i ../test/test-html-crefs.txt -o+ -T+ --thread
   ...
 
 Upon running shell function 'html-cref-test' as above on a GNU/Linux 64-bit Intel
 Core I5-3210M (Ivy Bridge) CPU machine, the timings data expressed as percentage
-values relative to those of parser library 'html-cref-ietrie.so' would look like:
+values relative to those of parser library 'html-cref-etrie.so' would look like:
 
   $ html-cref-test -i ../test/test-html-crefs.output -P+
-  ietrie: 100   0.00   0.00   0.00
-  iwtrie: 100   0.04   0.24   0.10
-  wtrie:  100   0.65   0.52   0.70
-  etrie:  100   0.67   0.53   0.47
-  bre2c:  100   1.73   1.59   1.54
-  re2c:   100   2.21   2.05   1.82
-  itrie:  100   2.22   2.05   2.04
-  trie:   100   2.95   2.57   2.23
+  etrie:  100      -      -   0.00
+  wtrie:  100      -      -   0.08
+  ietrie: 100      -      -   1.97
+  iwtrie: 100      -      -   2.06
+  bre2c:  100      -      -  10.41
+  re2c:   100      -      -  12.98
+  trie:   100      -      -  16.35
+  itrie:  100      -      -  17.03
 
 
 4. Appendix: Using Shell Function 'html-cref-test'
@@ -225,30 +225,46 @@ The command line options of 'html-cref-test' are as shown below:
 
   $ funchelp -f html-cref.sh -c html-cref-test --long-wrap-join=auto
   actions:
-    -N|--names             print out the names of known HTML char ref parsers
-    -T|--test-set[=NAMES]  test named HTML char ref parsers; NAMES is a
-                             comma-separated list of HTML char ref parser names
-                             (default: '+', i.e. all)
-    -P|--percents[=NAME]   process percents relative to the specified HTML char
-                             ref parser (default: '+' , i.e. 'ietrie')
+    -N|--names                     print out the names of known HTML char ref
+                                     parsers
+    -T|--test-set[=NAMES]          test named HTML char ref parsers; NAMES is a
+                                     comma-separated list of HTML char ref parser
+                                     names (default: '+', i.e. all)
+    -P|--percents[=NAME]           process percents relative to the specified
+                                     HTML char ref parser (default: '+' , i.e.
+                                     'etrie')
   options:
-    -f|--overwrite         force overwriting the output timings file if that
-                             already exists when action is `-T|--test-set'
-    -g|--group             group by names and sum up timings of input table when
-                             action is `-P|--percents'
-    -i|--input=FILE        input test file when action is `-T|--test-set' or
-                             input timings file when action is `-P|--percents'
-    -o|--output=FILE       output timings file when action is `-T|--test-set';
-                             '-' means to not generate such file at all
-                             (default); '+[SUFFIX]' stands for computing a name
-                             based on the input test file name: replace FILE's
-                             shortest `.' suffix with `.output[.SUFFIX]'; note
-                             that regardless of the argument these options have,
-                             the timings table is printed out on stdout
-    -r|--repeat=NUM        number of times to repeat the 'html-cref' command
-                             (default: 100)
-    -w|--width=NUM         width of timings columns' integral part when action is
-                             `-T|--test-set' (default: 9)
+    -f|--overwrite                 force overwriting the output timings file if
+                                     that already exists when action is `-T|
+                                     --test-set'
+    -g|--group                     group by names and sum up timings of input
+                                     table when action is `-P|--percents'
+    -i|--input=FILE                input test file when action is `-T|--test-set'
+                                     or input timings file when action is `-P|
+                                     --percents'
+    -o|--output=FILE               output timings file when action is `-T|
+                                     --test-set'; '-' means to not generate such
+                                     file at all (default); '+[SUFFIX]' stands
+                                     for computing a name based on the input test
+                                     file name: replace FILE's shortest `.'
+                                     suffix with `.output[.SUFFIX]'; note that
+                                     regardless of the argument these options
+                                     have, the timings table is printed out on
+                                     stdout
+    -r|--repeat=NUM                number of times to repeat the 'html-cref'
+                                     command (default: 100)
+    -m:|--timings[=NUM,NUM,NUM]    pass `-m|--timings=NUM,NUM,NUM' or, by case,
+        --real[-timings][=NUM]       `--{real,process,thread}-timings=NUM' to
+        --process[-timings][=NUM]    'html-cref' (default: '+', i.e. query the
+        --thread[-timings][=NUM]     numbers from 'clocks')
+    -s:|--sort=NAME                sort or not the output table by the named
+        --no-sort                    timings column when action is `-P|
+                                     --percents'; for sorting, NAME can be either
+                                     'real', 'process' or 'thread'; for not
+                                     sorting the table at all, NAME must be '-'
+                                     (default is sorting by '+', i.e. by 'thread')
+    -w|--width=NUM                 width of timings columns' integral part when
+                                     action is `-T|--test-set' (default: 9)
 
 As seen above, 'html-cref-test' has three modes of operation, corresponding each
 to one of its action options. The action options determines the action taken by
@@ -286,6 +302,11 @@ is specified as argument of the action option itself. Prior to printing it out,
 these action options do sort the resulting table on the third column, the REAL
 timings column.
 
+When the options `--{real,process,thread}-timings' are used invoking the shell
+function 'html-cref-test', the columns of the output table that correspond to
+the clocks that got ommited from the timing measurements will contain no values
+at all, but only an empty indicator.
+
 
 5. Appendix: The Parsers Generated by RE2C
 ==========================================
@@ -304,7 +325,7 @@ ones that would have been generated by RE2C's options `-g|--computed-gotos' and,
 respectively, `-s|--nested-ifs'. 
 
 On the machine mentioned in section 3 above, the 'gre2c' parser builds to an 1.4M
-binary that is almost two times slower than the 're2c' parser.
+binary that is about 9% slower than the 'bre2c' parser.
 
 RE2C version 1.1.1 generates identical 'sre2c' and 'bre2c' parsers:
 
@@ -335,6 +356,7 @@ given under reference entry [3].
 
   $ git-repo-diff -g $JSON_TYPE_HOME|lsdiff -s
   ! lib/file-buf.c
+  ! lib/su-size.c
 
 Note that 'git-repo-diff' expects to be issued from within the top directory of
 the source tree. Its command line options are as follows:

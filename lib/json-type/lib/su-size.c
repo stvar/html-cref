@@ -195,7 +195,7 @@ bool su_size_parse_list(
         if ((min > 0 && v < min) || (max > 0 && v > max))
             return ERROR(illegal_num, p);
 
-        if (++ r >= n_list)
+        if (++ r > n_list)
             return ERROR(list_overflow, p);
 
         *list ++ = v;

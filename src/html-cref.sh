@@ -649,20 +649,26 @@ html-cref-test()
     local tstl='itrie etrie wtrie ietrie iwtrie bre2c re2c trie'
     local tsto="${tstl// /|}"
     local tsts="@($tsto)*(,@($tsto))"
-    local defP='ietrie'
+    local timc='real process thread'
+    local timo="@(${timc// /|})?(-timings)"
+    local timx='^[0-9]+(,[0-9]+){2}$'
+    local defP='etrie'
     local defr='100'
+    local defs='5'
     local defw='9'
 
     local x="eval"
     local act="T"   # actions: \
                     #   N: print out the names of known HTML char ref parsers (--names)|
                     #   T: test named HTML char ref parsers; NAMES is a comma-separated list of HTML char ref parser names (default: '+', i.e. all)  (--test-set[=NAMES])|
-                    #   P: process percents relative to the specified HTML char ref parser (default: '+' , i.e. 'ietrie') (--percents[=NAME])
+                    #   P: process percents relative to the specified HTML char ref parser (default: '+' , i.e. 'etrie') (--percents[=NAME])
     local f=""      # force overwriting the output timings file if that already exists when action is `-T|--test-set' (--overwrite)
     local g=""      # group by names and sum up timings of input table when action is `-P|--percents' (--group)
     local i=""      # input test file when action is `-T|--test-set' or input timings file when action is `-P|--percents' (--input=FILE)
     local o="-"     # output timings file when action is `-T|--test-set'; '-' means to not generate such file at all (default); '+[SUFFIX]' stands for computing a name based on the input test file name: replace FILE's shortest `.' suffix with `.output[.SUFFIX]'; note that regardless of the argument these options have, the timings table is printed out on stdout (--output=FILE)
     local r="+"     # number of times to repeat the 'html-cref' command (default: 100) (--repeat=NUM)
+    local m="+"     # pass `-m|--timings=NUM,NUM,NUM' or, by case, `--{real,process,thread}-timings=NUM' to 'html-cref' (default: '+', i.e. query the numbers from 'clocks') (--timings[=NUM,NUM,NUM]|--real[-timings][=NUM]|--process[-timings][=NUM]|--thread[-timings][=NUM])
+    local s="+"     # sort or not the output table by the named timings column when action is `-P|--percents'; for sorting, NAME can be either 'real', 'process' or 'thread'; for not sorting the table at all, NAME must be '-' (default is sorting by '+', i.e. by 'thread') (--sort=NAME|--no-sort)
     local w="+"     # width of timings columns' integral part when action is `-T|--test-set' (default: 9) (--width=NUM)
 
     local arg='+'   # action argument
@@ -670,7 +676,7 @@ html-cref-test()
     local opt
     local OPT
     local OPTN
-    local opts=":dfgi:No:P:r:T:w:x-:"
+    local opts=":dfgi:m:No:P:r:s:T:w:x-:"
     local OPTARG
     local OPTERR=0
     local OPTIND=1
@@ -687,6 +693,8 @@ html-cref-test()
                 opt='i' ;;
             group)
                 opt='g' ;;
+            timings|$timo)
+                opt='m' ;;
             names)
                 opt='N' ;;
             output)
@@ -695,17 +703,19 @@ html-cref-test()
                 opt='P' ;;
             repeat)
                 opt='r' ;;
-            width)
-                opt='w' ;;
+            sort|no-sort)
+                opt='s' ;;
             test-set)
                 opt='T' ;;
+            width)
+                opt='w' ;;
             *)	error --long -o
                 return 1
                 ;;
         esac
 
         # check long option argument
-        [[ "$opt" == [PT] ]] ||
+        [[ "$opt" == [mPsT] ]] ||
         optlongchkarg ||
         return 1
 
@@ -724,6 +734,33 @@ html-cref-test()
             [io])
                 optarg
                 ;;
+            m)	#!!! echo >&2 "!!! OPT='$OPT' OPTN='$OPTN' OPTARG='$OPTARG'"
+                case "$OPT" in
+                    ""|timings)
+                        if [[ "$OPTARG" == $timx ]]; then
+                            m=(${OPTARG//,/ })
+                        elif [ "$OPTARG" == '+' ]; then
+                            m='+'
+                        elif [ -n "$OPTN" ]; then
+                            error --long -i
+                            return 1
+                        fi
+                        ;;
+                    $timo)
+                        [[ -z "$OPTN" || "$OPTARG" =~ ^\+$|^[0-9]+$ ]] || {
+                            error --long -i
+                            return 1
+                        }
+                        [ "$m" == '+' ] && m=(- - -)
+                        [ "${OPT:0:1}" == 'r' ] && m[0]="${OPTARG:-+}"
+                        [ "${OPT:0:1}" == 'p' ] && m[1]="${OPTARG:-+}"
+                        [ "${OPT:0:1}" == 't' ] && m[2]="${OPTARG:-+}"
+                        ;;
+                    *)	error "internal: unexpected OPT='$OPT'"
+                        return 1
+                        ;;
+                esac
+                ;;
             P)	#!!! echo >&2 "!!! OPT='$OPT' OPTN='$OPTN' OPTARG='$OPTARG'"
                 if [ -n "$OPT" -a -z "$OPTN" ]; then
                     OPTARG='+'
@@ -732,6 +769,33 @@ html-cref-test()
                     return 1
                 fi
                 optactarg
+                ;;
+            s)	#!!! echo >&2 "!!! OPT='$OPT' OPTN='$OPTN' OPTARG='$OPTARG'"
+                if [ "$OPT" == 'no-sort' ]; then
+                    [ -z "$OPTN" ] || {
+                        error --long -d
+                        return 1
+                    }
+                    s=''
+                else
+                    [ -z "$OPT" -o -n "$OPTN" ] || {
+                        error --long -a
+                        return 1
+                    }
+                    case "$OPTARG" in
+                        real)
+                            s=3 ;;
+                        process)
+                            s=4 ;;
+                        +|thread)
+                            s=5 ;;
+                        -)	s=''
+                            ;;
+                        *)	error --long -i
+                            return 1
+                            ;;
+                    esac
+                fi
                 ;;
             T)	#!!! echo >&2 "!!! OPT='$OPT' OPTN='$OPTN' OPTARG='$OPTARG'"
                 if [ -n "$OPT" -a -z "$OPTN" ]; then
@@ -776,7 +840,7 @@ html-cref-test()
     [ "$i" == '-' ] && i=''
     [ -n "$i" -a ! -f "$i" ] && {
         error "input file '$i' not found"
-        return 1
+        [ "$x" == 'eval' ] && return 1
     }
     quote i
 
@@ -787,6 +851,15 @@ html-cref-test()
         return 1
     fi
     # stev: need not quote $r
+
+    if [ "$s" == '+' ]; then
+        s="$defs"
+    elif [ -n "$s" ] && \
+         [ "$s" -lt 3 -o "$s" -gt 5 ]; then
+        error "internal: unexpected s='$s'"
+        return 1
+    fi
+    # stev: need not quote $s
 
     if [ "$w" == '+' ]; then
         w="$defw"
@@ -835,38 +908,108 @@ html-cref-test()
     local c
     local a
     local a2
-    local s
+    local s2
+    local m2
+    local k
+
+    # stev: normalize $m
+    [ "${#m[@]}" -eq 1 ] && m=($m $m $m)
+
+    [ "$act" == 'T' ] &&
+    a=(real process thread)
+
+    [[ "$act" == 'T' && "${m[@]}" =~ \+ ]] && {
+        a2=''
+        [[ "${m[@]}" != '+ + +' ]] &&
+        for ((k=0; k<3; k++)); do
+            [ "${m[$k]}" == '-' ] &&
+            continue
+            a2+="${a2:+ }${a[$k]}"
+        done
+        # stev: do not quote $a2 below
+        c="\
+./clocks${a2:+ $a2}|awk '{ print \$(NR + 2) }'"
+
+        if [ "$x" == 'echo' ]; then
+            echo "$c"
+            m2=(1 2 3)
+        else
+            m2=($(set -o pipefail && eval "$c")) &&
+            [[ "${#m2[@]}" -eq 3 ]] || {
+                error "inner command failed: $c"
+                return 1
+            }
+        fi
+        c=''
+    }
+    [ "$act" == 'T' ] && {
+        a2=''
+        [[ "${m[@]}" != '+ + +' ]] &&
+        for ((k=0; k<3; k++)); do
+            [ "${m[$k]}" == '-' ] &&
+            continue
+            a2+="${a2:+ }--${a[$k]}="
+            [ "${m[$k]}" == '+' ] &&
+            a2+="${m2[$k]}" ||
+            a2+="${m[$k]}"
+        done
+        [ -z "$a2" ] && m="${m2[@]}"
+        m="${a2:--m ${m// /,}}"
+    }
 
     if [ "$act" == 'T' -a "${#t[@]}" -eq 1 ]; then
-        s='
-            /^(real|process|thread)-timings:\s*/!b
-            s///
-            H
-            $!b
-            g
-            s/^\n//
-            s/\n/ /g
-            p'
+        a='
+            BEGIN {
+                C["real"] = 1
+                C["process"] = 2
+                C["thread"] = 3
+            }
+            {
+                if (!match($0, /^(real|process|thread)-timings:[ \t]*([^ \t]+)[ \t]*$/, a))
+                    print $0 > "/dev/stderr"
+                else {
+                    i = C[a[1]]
+                    V[i] = a[2]
+                    A[i] = 1
+                }
+            }
+            END {
+                printf("%s %s %s\n",
+                    A[1] ? V[1] : "-",
+                    A[2] ? V[2] : "-",
+                    A[3] ? V[3] : "-")
+            }'
 
         (( w += 3 ))
-        a='
-            { x += $1; y += $2; z += $3 }
+        a2='
+            function mean(t, v)
+            {
+                return !t \
+                    ? sprintf("%'"$w"'.2f", v / FNR) \
+                    : sprintf("%'"$w"'s", "-")
+            }
+            {
+                if ($1 != "-") x += $1; else a = 1
+                if ($2 != "-") y += $2; else b = 1
+                if ($3 != "-") z += $3; else c = 1
+            }
             END {
-                printf("%d %'"$w"'.2f %'"$w"'.2f %'"$w"'.2f\n", \
-                    FNR, x / FNR, y / FNR, z / FNR)
+                printf("%d %s %s %s\n", \
+                    FNR, mean(a, x), mean(b, y), mean(c, z))
             }'
 
         # stev: need not quote $arg below
+        # stev: do not quote $m below
         c="\
 r=$r
 set -o pipefail
 while [ \"\$((r --))\" -gt 0 ]; do
     LD_LIBRARY_PATH=. \\
-    ./html-cref ${i:+-f $i }-t sponge -p $arg -m 2>&1 >/dev/null|
-    sed -nr '$s' ||
+    ./html-cref ${i:+-f $i }-t sponge -p $arg $m 2>&1 >/dev/null|
+    awk -F '\n' '$a' ||
     break
 done|
-awk '$a'"
+awk '$a2'"
         [ -n "$o" ] &&
         c+="|
 stdbuf -oL tee $o"
@@ -889,9 +1032,10 @@ stdbuf -oL tee $o"
         [ -n "$o" ] && c+="\
 truncate -s0 $o"
         # stev: need not quote $t, $r2, $w2 below
+        # stev: do not quote $m below
         c+=${c:+$'\n'}"\
 time for t in ${t[@]}; do
-    $self ${i:+-i $i }${r2:+-r $r2 }${w2:+-w $w2 }-o- -T \$t|
+    $self ${i:+-i $i }${r2:+-r $r2 }${w2:+-w $w2 }-o- -T \$t $m|
     sed -ru \"s/^/\$t:$p/;s/^(.{${#p}})\s*/\1/\""
         [ -n "$o" ] && c+="|
     stdbuf -oL tee -a $o"
@@ -927,7 +1071,7 @@ done'
         a2='
             function percents(t, v,	r)
             {
-                if (t) {
+                if (t != "-" && v != "-" && t) {
                     r = sprintf("%.2f", (t - v) / t * 100)
                     return r == "-0.00" ? substr(r, 2) : r
                 }
@@ -966,9 +1110,10 @@ awk '$a'|"$'\n'
         c+="\
 awk '$a2'"
         [ -z "$g" ] && c+="${i:+ \\
-$i}|
-sort -k3g,3"
-        [ -n "$g" ] && c+='|
+$i}"
+        [ -n "$s" ] && c+="|
+sort -k${s}g,$s"
+        [ -z "$s" -a -n "$g" ] && c+='|
 sort -k1,1'
     else
         error "internal: unexpected act='$act'"

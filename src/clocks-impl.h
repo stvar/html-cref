@@ -27,132 +27,111 @@
 #include "clocks.h"
 #include "ptr-traits.h"
 
+#define ALWAYS_INLINE inline __attribute__((always_inline))
+
 #define CLOCKS_MAX_NSECS SZ(999999999)
 #define CLOCKS_LIM_NSECS SZ(1000000000)
 
-#define ALWAYS_INLINE inline __attribute__((always_inline))
+#define CLOCKS_TIME_INIT(t, s)           \
+    ({                                   \
+        uint64_t __s, __n;               \
+        STATIC(TYPEOF_IS(s,              \
+            struct timespec));           \
+        STATIC(TYPEOF_IS(t, uint64_t));  \
+        __s = INT_AS_SIZE(s.tv_sec);     \
+        __n = INT_AS_SIZE(s.tv_nsec);    \
+        ASSERT(__s <= UINT64_MAX /       \
+            CLOCKS_LIM_NSECS);           \
+        __s *= CLOCKS_LIM_NSECS;         \
+        ASSERT(__s <= UINT64_MAX - __n); \
+        (t) = __s + __n;                 \
+    })
 
-static ALWAYS_INLINE void
-    clocks_time_init(
-        struct clocks_time_t* time,
-        const struct timespec* timespec)
-{
-    time->secs = INT_AS_SIZE(timespec->tv_sec),
-    time->nsecs = INT_AS_SIZE(timespec->tv_nsec);
+#define CLOCKS_TIME_ADD(x, y)            \
+    ({                                   \
+        STATIC(TYPEOF_IS(x, uint64_t));  \
+        STATIC(TYPEOF_IS(y, uint64_t));  \
+        ASSERT((x) <= UINT64_MAX - (y)); \
+        (x) += (y);                      \
+    })
 
-    if (time->nsecs >= CLOCKS_LIM_NSECS) {
-        size_t q = time->nsecs / CLOCKS_LIM_NSECS;
+#define CLOCKS_TIME_SUB(x, y)            \
+    ({                                   \
+        STATIC(TYPEOF_IS(x, uint64_t));  \
+        STATIC(TYPEOF_IS(y, uint64_t));  \
+        ASSERT((x) >= (y));              \
+        (x) -= (y);                      \
+    })
 
-        time->nsecs %= CLOCKS_LIM_NSECS;
-        ASSERT_SIZE_ADD_NO_OVERFLOW(
-            time->secs, q);
-        time->secs += q;
-    }
-}
-
-static ALWAYS_INLINE void
-    clocks_time_assign(
-        struct clocks_time_t* time,
-        const struct clocks_time_t* time2)
-{
-    ASSERT(time2->nsecs <= CLOCKS_MAX_NSECS);
-
-    time->secs = time2->secs;
-    time->nsecs = time2->nsecs;
-}
-
-static ALWAYS_INLINE void
-    clocks_time_add(
-        struct clocks_time_t* time,
-        const struct clocks_time_t* time2)
-{
-    ASSERT(time->nsecs <= CLOCKS_MAX_NSECS);
-    ASSERT(time2->nsecs <= CLOCKS_MAX_NSECS);
-
-    // (0): L := CLOCKS_LIM_NSECS;
-    // (1): nsecs, nsecs2 < L =>
-    //      nsecs + nsecs2 < 2 * L
-    // (2): nsecs + nsecs2 >= L =>
-    //      (nsecs + nsecs2) % L =
-    //      (nsecs + nsecs2) - L:
-    //      by 0 < b <= a < 2 * b => a % b = a - b
-
-    SIZE_ADD_EQ(time->secs, time2->secs);
-    SIZE_ADD_EQ(time->nsecs, time2->nsecs);
-
-    if (time->nsecs >= CLOCKS_LIM_NSECS) {
-        time->nsecs -= CLOCKS_LIM_NSECS;
-        ASSERT_SIZE_INC_NO_OVERFLOW(
-            time->secs);
-        time->secs ++;
-    }
-}
-
-static ALWAYS_INLINE void
-    clocks_time_sub(
-        struct clocks_time_t* time,
-        const struct clocks_time_t* time2)
-{
-    ASSERT(time->nsecs <= CLOCKS_MAX_NSECS);
-    ASSERT(time2->nsecs <= CLOCKS_MAX_NSECS);
-
-    SIZE_SUB_EQ(time->secs, time2->secs);
-
-    if (time->nsecs < time2->nsecs) {
-        // time->nsecs + CLOCKS_MAX_NSECS
-        //   >= CLOCKS_MAX_NSECS
-        //   >= time2->nsecs
-
-        ASSERT_SIZE_ADD_NO_OVERFLOW(
-            time->nsecs, CLOCKS_MAX_NSECS);
-        time->nsecs += CLOCKS_MAX_NSECS;
-
-        ASSERT_SIZE_DEC_NO_OVERFLOW(time->secs);
-        time->secs --;
-    }
-
-    SIZE_SUB_EQ(time->nsecs, time2->nsecs);
-}
+#define CLOCKS_TIME_MUL(x, y)            \
+    ({                                   \
+        STATIC(TYPEOF_IS(x, uint64_t));  \
+        STATIC(TYPEOF_IS(y, uint64_t));  \
+        ASSERT(                          \
+            (y) == 0 ||                  \
+            (x) <= UINT64_MAX / (y));    \
+        (x) *= (y);                      \
+    })
 
 struct ntime_t
 {
-    struct clocks_time_t rtime;
-    struct clocks_time_t ptime;
-    struct clocks_time_t ttime;
+    clock_types_t   types;
+    struct timespec real;
+    struct timespec process;
+    struct timespec thread;
 };
 
-static ALWAYS_INLINE void
-    ntime_init(
-        struct ntime_t* ntime)
+#define CLOCKS_INIT(c, n)                                \
+    do {                                                 \
+        STATIC(TYPEOF_IS(c, struct clocks_t));           \
+        STATIC(TYPEOF_IS(n, struct ntime_t*) ||          \
+               TYPEOF_IS(n, const struct ntime_t*));     \
+        if (CLOCK_TYPES_HAS(thread))                     \
+            CLOCKS_TIME_INIT((c).thread, (n)->thread);   \
+        if (CLOCK_TYPES_HAS(process))                    \
+            CLOCKS_TIME_INIT((c).process, (n)->process); \
+        if (CLOCK_TYPES_HAS(real))                       \
+            CLOCKS_TIME_INIT((c).real, (n)->real);       \
+        (c).types = (n)->types;                          \
+    } while (0)
+
+#define CLOCK_TYPES_HAS(n) \
+    CLOCK_TYPES_HAS_(ntime->types, clock_type_ ## n)
+
+static ALWAYS_INLINE
+    void ntime_init(
+        struct ntime_t* ntime,
+        clock_types_t types)
 {
-    struct timespec r, p, t;
+    ntime->types = types;
 
-    clock_gettime(CLOCK_REALTIME, &r);
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &p);
-    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t);
-
-    clocks_time_init(&ntime->rtime, &r);
-    clocks_time_init(&ntime->ptime, &p);
-    clocks_time_init(&ntime->ttime, &t);
+    if (CLOCK_TYPES_HAS(real))
+        clock_gettime(CLOCK_REALTIME, &ntime->real);
+    if (CLOCK_TYPES_HAS(process))
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ntime->process);
+    if (CLOCK_TYPES_HAS(thread))
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ntime->thread);
 }
 
-static ALWAYS_INLINE struct clocks_t
-    ntime_clocks(
-        const struct ntime_t* time)
+static ALWAYS_INLINE
+    struct clocks_t ntime_clocks(
+        const struct ntime_t* ntime)
 {
-    struct clocks_t r;
+    struct clocks_t p, r;
     struct ntime_t t;
 
-    ntime_init(&t);
+    t.types = ntime->types;
 
-    clocks_time_assign(&r.real, &t.rtime);
-    clocks_time_sub(&r.real, &time->rtime);
+    if (CLOCK_TYPES_HAS(thread))
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t.thread);
+    if (CLOCK_TYPES_HAS(process))
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t.process);
+    if (CLOCK_TYPES_HAS(real))
+        clock_gettime(CLOCK_REALTIME, &t.real);
 
-    clocks_time_assign(&r.process, &t.ptime);
-    clocks_time_sub(&r.process, &time->ptime);
-
-    clocks_time_assign(&r.thread, &t.ttime);
-    clocks_time_sub(&r.thread, &time->ttime);
+    CLOCKS_INIT(p, ntime);
+    CLOCKS_INIT(r, &t);
+    clocks_sub(&r, &p);
 
     return r;
 }

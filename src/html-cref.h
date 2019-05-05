@@ -58,7 +58,8 @@ int html_cref_ ## t ##           \
     struct ntime_t s;            \
     int r;                       \
                                  \
-    ntime_init(&s);              \
+    ntime_init(&s,               \
+        clocks.types);           \
     r = html_cref_ ## t ##       \
                  _ ## n(p);      \
     c = ntime_clocks(&s);        \
