@@ -244,7 +244,7 @@ const char program[] = CLOCKS;
 struct clocks_options_t
 {
     clock_types_t types;
-    bool verbose: 1;
+    bits_t verbose: 1;
 };
 
 // $ . ~/lookup-gen/commands.sh
