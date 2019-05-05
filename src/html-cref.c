@@ -186,6 +186,8 @@ static void options_usage(void)
     fprintf(stdout, help, program);
 }
 
+#ifdef TIMINGS
+
 #undef  CLOCK_TYPES_HAS
 #define CLOCK_TYPES_HAS(t) \
     CLOCK_TYPES_HAS_(opts->timings, t)
@@ -208,6 +210,8 @@ static char* options_dump_timings(
 
     return b;
 }
+
+#endif // TIMINGS
 
 static void options_dump(const struct options_t* opts)
 {
@@ -403,6 +407,8 @@ static const char*
 }
 #endif
 
+#ifdef TIMINGS
+
 static size_t options_parse_overheads_optarg(
     const char* opt_name, const char* opt_arg,
     size_t* vals, size_t n_vals)
@@ -443,6 +449,8 @@ static size_t options_parse_clock_overhead_optarg(
 
     return 1U << clock;
 }
+
+#endif // TIMINGS
 
 static const struct options_t* options(
     int argc, char* argv[])
