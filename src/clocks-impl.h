@@ -120,14 +120,14 @@ static ALWAYS_INLINE
     struct clocks_t p, r;
     struct ntime_t t;
 
-    t.types = ntime->types;
-
     if (CLOCK_TYPES_HAS(thread))
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t.thread);
     if (CLOCK_TYPES_HAS(process))
         clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t.process);
     if (CLOCK_TYPES_HAS(real))
         clock_gettime(CLOCK_REALTIME, &t.real);
+
+    t.types = ntime->types;
 
     CLOCKS_INIT(p, ntime);
     CLOCKS_INIT(r, &t);
