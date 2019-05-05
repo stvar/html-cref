@@ -249,8 +249,6 @@ struct clocks_options_t
 
 // $ . ~/lookup-gen/commands.sh
 // $ print() { printf '%s\n' "$@"; }
-// $ adjust-func() { ssed -R '1s/^/static /;1s/\&/*/;s/\bt\s+=\s+/*t = 1U << /;1s/(?<=\()/\n\t/;s/_t::/_/'; }
-
 // $ adjust-func() { ssed -R '1s/^/static /;1s/\&/*/;s/\bt\s+=\s+/*t = 1U << /;1s/(?<=\()/\n\t/;s/s_t::/_/'; }
 
 // $ print real process thread|gen-func -f clocks_lookup_type -r clock_types_t -Pf -q \!strcmp|adjust-func
