@@ -299,7 +299,7 @@ The action options `-P|--percents' take as input a table obtained from action
 options `-T|--test-set' for to transform the nanoseconds values to percentage
 values relative to the corresponding nanoseconds value on the table's row that
 is specified as argument of the action option itself. Prior to printing it out,
-these action options do sort the resulting table on the third column, the REAL
+these action options do sort the resulting table on the fifth column, the THREAD
 timings column.
 
 When the options `--{real,process,thread}-timings' are used invoking the shell
