@@ -279,6 +279,11 @@ the names printed out by action options `-N|--names' -- each built with the
 timings code enabled and located in the current directory from which the shell
 script 'html-cref-test' is invoked.
 
+The shell script 'html-cref-test' also expects to find the binary 'clocks'.
+This latter binary is obtained as a result of a normal building of Html-Cref
+and it's used for producing clock timings overhead estimates that 'html-cref'
+uses for adjusting the timings measurements done.
+
 The result obtained from `-T|--test-set' is a table of which rows are of form:
 
   NAME: COUNT REAL PROCESS THREAD
