@@ -295,9 +295,13 @@ static const struct clocks_options_t*
     argv ++;
     argc --;
 
-    opts.verbose = argc > 0
-        && (!strcmp(*argv, "-v")
-            || !strcmp(*argv, "--verbose"));
+    if (argc > 0 &&
+        (!strcmp(*argv, "-v") ||
+         !strcmp(*argv, "--verbose"))) {
+        opts.verbose = 1;
+        argv ++;
+        argc --;
+    }
 
     opts.types = 0;
 
