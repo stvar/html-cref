@@ -283,7 +283,7 @@ static const struct clocks_options_t*
     clocks_options(int argc, char* argv[])
 {
     static const char help[] = 
-        CLOCKS ": usage: ./" CLOCKS " [-v] [NAME...]\n"
+        CLOCKS ": usage: ./" CLOCKS " [-v|--verbose] [NAME...]\n"
         CLOCKS ": where NAME is either 'real', 'process' or 'thread'";
     static struct clocks_options_t opts = {
         .types   = 0,
