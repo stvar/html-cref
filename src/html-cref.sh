@@ -739,9 +739,10 @@ html-cref-test()
                     ""|timings)
                         if [[ "$OPTARG" == $timx ]]; then
                             m=(${OPTARG//,/ })
-                        elif [ "$OPTARG" == '+' ]; then
+                        elif [[ "$OPTARG" == '+' || \
+                                -n "$OPT" && -z "$OPTN" ]]; then
                             m='+'
-                        elif [ -n "$OPTN" ]; then
+                        else
                             error --long -i
                             return 1
                         fi
