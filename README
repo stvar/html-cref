@@ -327,11 +327,10 @@ the total amount of CPU instruction cycles spent by the parser library named by
 'NAME' inside the HTML named character references parser function it implements.
 
 The action options `-P|--percents' take as input a table obtained from action
-options `-T|--test-set' for to transform the nanoseconds values to percentage
-values relative to the corresponding nanoseconds value on the table's row that
-is specified as argument of the action option itself. Prior to printing it out,
-these action options do sort the resulting table on the fifth column, the THREAD
-timings column.
+options `-T|--test-set' for to transform the cell values to percentage values
+relative to the corresponding cell value on the table's row that is specified
+as argument of the action option itself. Prior to printing it out, these action
+options do sort the resulting table on the fifth column, the THREAD column.
 
 When the options `--{real,process,thread}-timings' are used invoking the shell
 function 'html-cref-test', the columns of the output table that correspond to
