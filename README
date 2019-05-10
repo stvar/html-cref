@@ -335,7 +335,7 @@ timings column.
 
 When the options `--{real,process,thread}-timings' are used invoking the shell
 function 'html-cref-test', the columns of the output table that correspond to
-the clocks that got ommited from the timing measurements will contain no values
+the clocks that got omitted from the timing measurements will contain no values
 at all, but only an empty indicator.
 
 
