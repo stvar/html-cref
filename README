@@ -72,7 +72,7 @@ object) and have the main program, 'html-cref' load an actual parser dynamically
 at run time (the parser gets specified through 'html-cref's command line options
 `-p|--cref-parser=$NAME'):
 
-  $ make [OPT=$OPT] [TIMINGS=no|yes]
+  $ make [OPT=$OPT] [TIMINGS=no|yes] [CYCLES=no|yes]
 
 The other alternative is to have 'html-cref' be a standalone program that does
 not depend on external parser libraries. The main program is built such that to
@@ -83,6 +83,14 @@ include only one specified parser:
 The above `$NAME' can be one of following: ietrie, iwtrie, itrie, etrie, wtrie,
 trie, bre2c or re2c. The argument of form `OPT=$OPT' asks GCC to do optimization
 of the binaries it produces according to the optimization level option `-O$OPT'.
+
+When passing to 'make' the argument 'TIMINGS=yes', then the binaries built will
+include code that is able to do timing measurements of the HTML named character
+reference parsers. The argument 'CYCLES=yes' has meaning only given along with
+'TIMINGS=yes'. In such case, it brings in the binaries built code that is able
+to measure the CPU instruction cycles spent by the parsers of Html-Cref. Note
+that this code is valid only on Intel/AMD platforms that support the two time
+stamp counter instructions RDTSC and RDTSCP. 
 
 The received package comes along with a comprehensive test-suite contained in
 'test' directory. The shell script 'test/test.sh' starts the test-suite and it
@@ -255,14 +263,18 @@ The command line options of 'html-cref-test' are as shown below:
                                      command (default: 100)
     -m:|--timings[=NUM,NUM,NUM]    pass `-m|--timings=NUM,NUM,NUM' or, by case,
         --real[-timings][=NUM]       `--{real,process,thread}-timings=NUM' to
-        --process[-timings][=NUM]    'html-cref' (default: '+', i.e. query the
-        --thread[-timings][=NUM]     numbers from 'clocks')
+        --process[-timings][=NUM]    'html-cref'; the default NUM is '+', i.e.
+        --thread[-timings][=NUM]     query that number from 'clocks'
+    -c|--[clock-]cycles[=NUM]      pass `-c|--clock-cycles[=NUM]' to 'html-cref'
+                                     (default do not); the default NUM is '+',
+                                     i.e. query that number from 'clocks'
     -s:|--sort=NAME                sort or not the output table by the named
         --no-sort                    timings column when action is `-P|
                                      --percents'; for sorting, NAME can be either
-                                     'real', 'process' or 'thread'; for not
-                                     sorting the table at all, NAME must be '-'
-                                     (default is sorting by '+', i.e. by 'thread')
+                                     'real', 'process', 'thread' or 'cycles'; for
+                                     not sorting the table at all, NAME must be
+                                     '-' (default is sorting by '+', i.e. by
+                                     'thread')
     -w|--width=NUM                 width of timings columns' integral part when
                                      action is `-T|--test-set' (default: 9)
 

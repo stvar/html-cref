@@ -84,6 +84,21 @@ ${MODS}: clocks.c
 endif
 endif
 
+ifdef CYCLES
+ifneq ($(words ${CYCLES}),1)
+$(error invalid CYCLES='${CYCLES}')
+endif
+ifneq ($(filter-out no yes,${CYCLES}),)
+$(error invalid CYCLES='${CYCLES}')
+endif
+ifeq ($(strip ${CYCLES}),yes)
+ifneq ($(strip ${TIMINGS}),yes)
+$(error CYCLES=yes not given along with TIMINGS=yes)
+endif
+CFLAGS += -DCLOCK_CYCLES
+endif
+endif
+
 ifdef BUILTIN
 ifneq ($(words ${BUILTIN}),1)
 $(error invalid BUILTIN='${BUILTIN}')

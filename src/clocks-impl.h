@@ -73,13 +73,71 @@
         (x) *= (y);                      \
     })
 
+#ifdef CLOCK_CYCLES
+
+// Gabriele Paoloni:
+// How to Benchmark Code Execution Times on Intel
+// IA-32 and IA-64 Instruction Set Architectures.
+// White Paper, Intel Corporation, September 2010
+// https://www.intel.com/content/dam/www/public/us/en/documents/white-papers/
+// ia-32-ia-64-benchmark-code-execution-paper.pdf
+
+#define CLOCK_GET_RDTSC_CYCLES(c)  \
+    ({                             \
+        uint32_t __l, __h;         \
+        STATIC(TYPEOF_IS(c,        \
+            uint64_t));            \
+        asm volatile (             \
+            "cpuid\n"              \
+            "rdtsc\n"              \
+            "mov %%edx, %0\n"      \
+            "mov %%eax, %1\n" :    \
+            "=r" (__h),            \
+            "=r" (__l) ::          \
+            "%rax", "%rbx",        \
+            "%rcx", "%rdx"         \
+        );                         \
+        c = (uint64_t) __h << 32 | \
+            __l;                   \
+    })
+#define CLOCK_GET_RDTSCP_CYCLES(c) \
+    ({                             \
+        uint32_t __l, __h;         \
+        STATIC(TYPEOF_IS(c,        \
+            uint64_t));            \
+        asm volatile (             \
+            "rdtscp\n"             \
+            "mov %%edx, %0\n"      \
+            "mov %%eax, %1\n"      \
+            "cpuid\n" :            \
+            "=r" (__h),            \
+            "=r" (__l) ::          \
+            "%rax", "%rbx",        \
+            "%rcx", "%rdx"         \
+        );                         \
+        c = (uint64_t) __h << 32 | \
+            __l;                   \
+    })
+
+#endif // CLOCK_CYCLES
+
 struct ntime_t
 {
     clock_types_t   types;
     struct timespec real;
     struct timespec process;
     struct timespec thread;
+#ifdef CLOCK_CYCLES
+    clock_cycles_t  cycles;
+#endif
 };
+
+#ifdef CLOCK_CYCLES
+#define CLOCKS_INIT_CYCLES(c, n) \
+    (c).cycles = (n)->cycles
+#else
+#define CLOCKS_INIT_CYCLES(c, n)
+#endif
 
 #define CLOCKS_INIT(c, n)                                \
     do {                                                 \
@@ -92,6 +150,7 @@ struct ntime_t
             CLOCKS_TIME_INIT((c).process, (n)->process); \
         if (CLOCK_TYPES_HAS(real))                       \
             CLOCKS_TIME_INIT((c).real, (n)->real);       \
+        CLOCKS_INIT_CYCLES(c, n);                        \
         (c).types = (n)->types;                          \
     } while (0)
 
@@ -111,6 +170,10 @@ static ALWAYS_INLINE
         clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ntime->process);
     if (CLOCK_TYPES_HAS(thread))
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ntime->thread);
+#ifdef CLOCK_CYCLES
+    if (CLOCK_TYPES_HAS(cycles))
+        CLOCK_GET_RDTSC_CYCLES(ntime->cycles);
+#endif
 }
 
 static ALWAYS_INLINE
@@ -120,6 +183,10 @@ static ALWAYS_INLINE
     struct clocks_t p, r;
     struct ntime_t t;
 
+#ifdef CLOCK_CYCLES
+    if (CLOCK_TYPES_HAS(cycles))
+        CLOCK_GET_RDTSCP_CYCLES(t.cycles);
+#endif
     if (CLOCK_TYPES_HAS(thread))
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &t.thread);
     if (CLOCK_TYPES_HAS(process))

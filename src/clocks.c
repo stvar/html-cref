@@ -19,6 +19,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h>
 
@@ -34,6 +35,9 @@ void clocks_init(
     clocks->real = 0;
     clocks->process = 0;
     clocks->thread = 0;
+#ifdef CLOCK_CYCLES
+    clocks->cycles = 0;
+#endif
 }
 
 #undef  CLOCK_TYPES_HAS
@@ -52,6 +56,10 @@ void clocks_add(
         CLOCKS_TIME_ADD(clocks->process, clocks2->process);
     if (CLOCK_TYPES_HAS(thread))
         CLOCKS_TIME_ADD(clocks->thread, clocks2->thread);
+#ifdef CLOCK_CYCLES
+    if (CLOCK_TYPES_HAS(cycles))
+        CLOCKS_TIME_ADD(clocks->cycles, clocks2->cycles);
+#endif
 }
 
 void clocks_sub(
@@ -66,6 +74,10 @@ void clocks_sub(
         CLOCKS_TIME_SUB(clocks->process, clocks2->process);
     if (CLOCK_TYPES_HAS(thread))
         CLOCKS_TIME_SUB(clocks->thread, clocks2->thread);
+#ifdef CLOCK_CYCLES
+    if (CLOCK_TYPES_HAS(cycles))
+        CLOCKS_TIME_SUB(clocks->cycles, clocks2->cycles);
+#endif
 }
 
 struct clocks_def_t
@@ -90,7 +102,10 @@ struct clocks_def_t
 static const struct clocks_def_t clocks_defs[] = {
     CASE(real),
     CASE(process),
-    CASE(thread)
+    CASE(thread),
+#ifdef CLOCK_CYCLES
+    CASE(cycles)
+#endif
 };
 
 enum { clocks_n_defs = ARRAY_SIZE(clocks_defs) };
@@ -156,12 +171,17 @@ void clocks_adjust(
 {
     const struct clocks_def_t *b, *p;
     const clocks_time_t c = count;
+    size_t i = clocks_n_defs - 1;
     clocks_time_t s = 0, t;
     struct clocks_t a;
-    size_t i = 2;
 
     ASSERT(clocks->types == overhead->types);
     a.types = clocks->types;
+
+#ifdef CLOCK_CYCLES
+    if (CLOCK_TYPES_HAS(clock_type_cycles))
+        ASSERT(!(clocks->types & clock_types_all));
+#endif
 
     for (b = clocks_defs,
          p = clocks_defs + clocks_n_defs;
@@ -249,30 +269,45 @@ struct clocks_options_t
 
 // $ . ~/lookup-gen/commands.sh
 // $ print() { printf '%s\n' "$@"; }
-// $ adjust-func() { ssed -R '1s/^/static /;1s/\&/*/;s/\bt\s+=\s+/*t = 1U << /;1s/(?<=\()/\n\t/;s/s_t::/_/'; }
+// $ adjust-func() { ssed -R '1s/^/static /;1s/\&/*/;s/\bt\s+=\s+/*t = /;1s/(?<=\()/\n\t/;s/([a-z0-9_]+)s_t::([a-z0-9]+)/\U\1\E(\2)/'; }
 
-// $ print real process thread|gen-func -f clocks_lookup_type -r clock_types_t -Pf -q \!strcmp|adjust-func
+// $ gen-lookup-func0() { print "$@"|gen-func -f clocks_lookup_type -r clock_types_t -Pf -q \!strcmp|adjust-func; }
+// $ gen-lookup-func() { diff -DCLOCK_CYCLES <(gen-lookup-func0 real process thread) <(gen-lookup-func0 real process thread cycles)|ssed -R 's/(?<=^#else|^#endif)\s+\/\*\s*CLOCK_CYCLES\s*\*\/\s*$//'; }
+
+// $ gen-lookup-func
 
 static bool clocks_lookup_type(
     const char* n, clock_types_t* t)
 {
+#ifndef CLOCK_CYCLES
     // pattern: process|real|thread
+#else
+    // pattern: cycles|process|real|thread
+#endif
     switch (*n ++) {
+#ifdef CLOCK_CYCLES
+    case 'c':
+        if (!strcmp(n, "ycles")) {
+            *t = CLOCK_TYPE(cycles);
+            return true;
+        }
+        return false;
+#endif
     case 'p':
         if (!strcmp(n, "rocess")) {
-            *t = 1U << clock_type_process;
+            *t = CLOCK_TYPE(process);
             return true;
         }
         return false;
     case 'r':
         if (!strcmp(n, "eal")) {
-            *t = 1U << clock_type_real;
+            *t = CLOCK_TYPE(real);
             return true;
         }
         return false;
     case 't':
         if (!strcmp(n, "hread")) {
-            *t = 1U << clock_type_thread;
+            *t = CLOCK_TYPE(thread);
             return true;
         }
     }
@@ -283,37 +318,53 @@ static const struct clocks_options_t*
     clocks_options(int argc, char* argv[])
 {
     static const char help[] = 
-        CLOCKS ": usage: ./" CLOCKS " [-v|--verbose] [NAME...]\n"
-        CLOCKS ": where NAME is either 'real', 'process' or 'thread'";
+"usage: ./" CLOCKS " [-?|--help] [-v|--verbose] [NAME...]\n"
+#ifndef CLOCK_CYCLES
+"where NAME is either 'real', 'process' or 'thread'";
+#else
+"where NAME is either 'real', 'process', 'thread' or 'cycles'";
+#endif
     static struct clocks_options_t opts = {
         .types   = 0,
         .verbose = 0,
     };
     clock_types_t t;
+    bool u = false;
 
     ASSERT(argc > 0);
     argv ++;
     argc --;
 
-    if (argc > 0 &&
-        (!strcmp(*argv, "-v") ||
-         !strcmp(*argv, "--verbose"))) {
-        opts.verbose = 1;
-        argv ++;
-        argc --;
+    for (; argc > 0; argc --, argv ++) {
+        if (!strcmp(*argv, "-?") ||
+             !strcmp(*argv, "--help"))
+            u = true;
+        else
+        if (!strcmp(*argv, "-v") ||
+             !strcmp(*argv, "--verbose"))
+            opts.verbose = 1;
+        else
+        if (*argv[0] == '-')
+            error("invalid command line option '%s'", *argv);
+        else {
+            if (!clocks_lookup_type(*argv, &t))
+                error("invalid clock type '%s'", *argv);
+            opts.types |= t;
+        }
     }
 
-    opts.types = 0;
-
-    for (; argc > 0; argc --, argv ++) {
-        if (!clocks_lookup_type(*argv, &t))
-            error("invalid clock type '%s'\n%s",
-                *argv, help);
-        opts.types |= t;
+    if (u) {
+        puts(help);
+        exit(0);
     }
 
     if (opts.types == 0)
+#ifndef CLOCK_CYCLES
         opts.types = clock_types_all;
+#else
+        opts.types = clock_types_all |
+                     CLOCK_TYPE(cycles);
+#endif
 
     return &opts;
 }
@@ -321,27 +372,78 @@ static const struct clocks_options_t*
 enum { clocks_n_overhead = SZ(10000000) };
 
 struct clocks_t clocks_gettime_overhead(
-    clockid_t id)
+    size_t clock_type)
 {
+#undef  CASE
+#define CASE(t, n) \
+    [clock_type_ ## t] = CLOCK_ ## n
+    static const clockid_t ids[] = {
+        CASE(real, REALTIME),
+        CASE(process, PROCESS_CPUTIME_ID),
+        CASE(thread, PROCESS_CPUTIME_ID),
+    };
     size_t n = clocks_n_overhead;
     struct timespec s;
     struct ntime_t t;
+    clockid_t c;
 
-    ntime_init(&t,
-        clock_types_all);
+    ASSERT(ARRAY_INDEX(ids, clock_type));
+    c = ids[clock_type];
+
+    ntime_init(&t, clock_types_all);
 
     while (n --)
-        clock_gettime(id, &s);
+        clock_gettime(c, &s);
 
     return ntime_clocks(&t);
 }
 
+#ifdef CLOCK_CYCLES
+
+struct clocks_t clocks_rdtsc_overhead(
+    size_t clock_type UNUSED)
+{
+    size_t n = clocks_n_overhead;
+    clocks_time_t s, e;
+    struct clocks_t r;
+
+    clocks_init(&r,
+        CLOCK_TYPE(cycles));
+
+    r.cycles = CLOCK_CYCLES_MAX;
+
+    while (n --) {
+        CLOCK_GET_RDTSC_CYCLES(s);
+        CLOCK_GET_RDTSCP_CYCLES(e);
+
+        CLOCKS_TIME_SUB(e, s);
+        if (r.cycles > e)
+            r.cycles = e;
+    }
+
+    return r;
+}
+
+#undef  CLOCK_TYPES_HAS
+#define CLOCK_TYPES_HAS(t) \
+    CLOCK_TYPES_HAS_(clock_types, t)
+
+#endif // CLOCK_CYCLES
+
 void clocks_print_line(
     const struct clocks_t* clocks,
-    bool empty, bool averages, FILE* file)
+#ifdef CLOCK_CYCLES
+    clock_types_t clock_types,
+#endif
+    bool empty, bool averages,
+    FILE* file)
 {
     const struct clocks_def_t *p, *e;
+#ifdef CLOCK_CYCLES
+    size_t i = 0;
+#endif
 
+#ifndef CLOCK_CYCLES
     for (p = clocks_defs,
          e = clocks_defs + clocks_n_defs;
          p < e;
@@ -358,6 +460,27 @@ void clocks_print_line(
             fprintf(file, " %10" PRIu64,
                 CLOCKS_TIME(p));
     }
+#else // CLOCK_CYCLES
+    for (p = clocks_defs,
+         e = clocks_defs + clocks_n_defs;
+         p < e;
+         i ++,
+         p ++) {
+        int w = averages || i >= clock_type_cycles
+            ? 5 : 10;
+
+        if (empty || !CLOCK_TYPES_HAS(i))
+            fprintf(file, " %*s", w, "-");
+        else
+        if (averages && i < clock_type_cycles)
+            fprintf(file, " %5.0f",
+                (double) CLOCKS_TIME(p) /
+                clocks_n_overhead);
+        else
+            fprintf(file, " %*" PRIu64,
+                w, CLOCKS_TIME(p));
+    }
+#endif // CLOCK_CYCLES
     fputc('\n', file);
 }
 
@@ -370,14 +493,18 @@ int main(int argc, char* argv[])
     struct clock_def_t
     {
         const char* name;
-        clockid_t   id;
+        struct clocks_t (*func)(size_t);
     };
 #undef  CASE
-#define CASE(n, t) { .name = #n, .id = CLOCK_ ## t }
+#define CASE(n, t) \
+    { .name = #n, .func = clocks_ ## t ## _overhead }
     static const struct clock_def_t clocks[] = {
-        CASE(real, REALTIME),
-        CASE(process, PROCESS_CPUTIME_ID),
-        CASE(thread, THREAD_CPUTIME_ID),
+        CASE(real, gettime),
+        CASE(process, gettime),
+        CASE(thread, gettime),
+#ifdef CLOCK_CYCLES
+        CASE(cycles, rdtsc),
+#endif
     };
     const struct clocks_options_t* opts =
         clocks_options(argc, argv);
@@ -392,7 +519,7 @@ int main(int argc, char* argv[])
          p ++,
          i ++) {
         if ((c = CLOCK_TYPES_HAS(i)))
-            t = clocks_gettime_overhead(p->id);
+            t = p->func(i);
 
         l = strlen(p->name) + 1;
         ASSERT(l <= 8);
@@ -403,6 +530,11 @@ int main(int argc, char* argv[])
             c ? clocks_n_overhead : 0);
 
         clocks_print_line(&t,
+#ifdef CLOCK_CYCLES
+            i == clock_type_cycles
+            ? ~clock_types_all
+            : clock_types_all, 
+#endif
             !c, !opts->verbose, stdout);
     }
 

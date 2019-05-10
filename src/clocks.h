@@ -23,27 +23,48 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "va-args.h"
+
 typedef unsigned clock_types_t;
 typedef uint64_t clocks_time_t;
 
 #define CLOCKS_TIME_MAX UINT64_MAX
 
+#ifdef CLOCK_CYCLES
+typedef uint64_t clock_cycles_t;
+
+#define CLOCK_CYCLES_MAX UINT64_MAX
+#endif
+
 enum {
     clock_type_real,
     clock_type_process,
     clock_type_thread,
+#ifdef CLOCK_CYCLES
+    clock_type_cycles,
+#endif
 };
 
+#define CLOCK_BIT(c) \
+    (                \
+        1U << c      \
+    )
 #define CLOCK_TYPES_HAS_(s, t) \
     (                          \
-        (s) & (1U << t)        \
+        (s) & CLOCK_BIT(t)     \
     )
+#define CLOCK_TYPE(n) \
+    CLOCK_BIT(clock_type_ ## n)
+#define CLOCK_TYPES(...) \
+    (VA_ARGS_REPEAT(|, CLOCK_TYPE, __VA_ARGS__))
 
+// stev: not including 'cycles' in
+// 'clock_types_all' since 'cycles'
+// isn't measuring time -- but CPU
+// instruction cycles
 enum {
-    clock_types_all = 
-        (1U << clock_type_real) |
-        (1U << clock_type_process) |
-        (1U << clock_type_thread)
+    clock_types_all =
+    CLOCK_TYPES(real, process, thread)
 };
 
 struct clocks_t
@@ -53,6 +74,9 @@ struct clocks_t
     clocks_time_t real;
     clocks_time_t process;
     clocks_time_t thread;
+#ifdef CLOCK_CYCLES
+    clock_cycles_t cycles;
+#endif
 };
 
 void clocks_init(

@@ -667,8 +667,9 @@ html-cref-test()
     local i=""      # input test file when action is `-T|--test-set' or input timings file when action is `-P|--percents' (--input=FILE)
     local o="-"     # output timings file when action is `-T|--test-set'; '-' means to not generate such file at all (default); '+[SUFFIX]' stands for computing a name based on the input test file name: replace FILE's shortest `.' suffix with `.output[.SUFFIX]'; note that regardless of the argument these options have, the timings table is printed out on stdout (--output=FILE)
     local r="+"     # number of times to repeat the 'html-cref' command (default: 100) (--repeat=NUM)
-    local m="+"     # pass `-m|--timings=NUM,NUM,NUM' or, by case, `--{real,process,thread}-timings=NUM' to 'html-cref' (default: '+', i.e. query the numbers from 'clocks') (--timings[=NUM,NUM,NUM]|--real[-timings][=NUM]|--process[-timings][=NUM]|--thread[-timings][=NUM])
-    local s="+"     # sort or not the output table by the named timings column when action is `-P|--percents'; for sorting, NAME can be either 'real', 'process' or 'thread'; for not sorting the table at all, NAME must be '-' (default is sorting by '+', i.e. by 'thread') (--sort=NAME|--no-sort)
+    local m="+"     # pass `-m|--timings=NUM,NUM,NUM' or, by case, `--{real,process,thread}-timings=NUM' to 'html-cref'; the default NUM is '+', i.e. query that number from 'clocks' (--timings[=NUM,NUM,NUM]|--real[-timings][=NUM]|--process[-timings][=NUM]|--thread[-timings][=NUM])
+    local c=""      # pass `-c|--clock-cycles[=NUM]' to 'html-cref' (default do not); the default NUM is '+', i.e. query that number from 'clocks' (--[clock-]cycles[=NUM])
+    local s="+"     # sort or not the output table by the named timings column when action is `-P|--percents'; for sorting, NAME can be either 'real', 'process', 'thread' or 'cycles'; for not sorting the table at all, NAME must be '-' (default is sorting by '+', i.e. by 'thread') (--sort=NAME|--no-sort)
     local w="+"     # width of timings columns' integral part when action is `-T|--test-set' (default: 9) (--width=NUM)
 
     local arg='+'   # action argument
@@ -676,7 +677,7 @@ html-cref-test()
     local opt
     local OPT
     local OPTN
-    local opts=":dfgi:m:No:P:r:s:T:w:x-:"
+    local opts=":c:dfgi:m:No:P:r:s:T:w:x-:"
     local OPTARG
     local OPTERR=0
     local OPTIND=1
@@ -687,6 +688,8 @@ html-cref-test()
         # translate long options to short ones
         test -n "$OPT" &&
         case "$OPT" in
+            cycles|clock-cycles)
+                opt='c' ;;
             overwrite)
                 opt='f' ;;
             input)
@@ -715,7 +718,7 @@ html-cref-test()
         esac
 
         # check long option argument
-        [[ "$opt" == [mPsT] ]] ||
+        [[ "$opt" == [cmPsT] ]] ||
         optlongchkarg ||
         return 1
 
@@ -733,6 +736,29 @@ html-cref-test()
                 ;;
             [io])
                 optarg
+                ;;
+            c)	#!!! echo >&2 "!!! OPT='$OPT' OPTN='$OPTN' OPTARG='$OPTARG'"
+                case "$OPT" in
+                    "")
+                        if [[ "$OPTARG" =~ ^\+$|^[0-9]+$ ]]; then
+                            c="$OPTARG"
+                        else
+                            error --long -i
+                            return 1
+                        fi
+                        ;;
+                    ?(clocks-)cycles)
+                        [[ -z "$OPTN" || "$OPTARG" =~ ^\+$|^[0-9]+$ ]] || {
+                            error --long -i
+                            return 1
+                        }
+                        c="${OPTARG:-+}"
+                        ;;
+                    *)	error "internal: unexpected OPT='$OPT'"
+                        return 1
+                        ;;
+                esac
+                m=(- - -) # stev: reset $m
                 ;;
             m)	#!!! echo >&2 "!!! OPT='$OPT' OPTN='$OPTN' OPTARG='$OPTARG'"
                 case "$OPT" in
@@ -761,6 +787,7 @@ html-cref-test()
                         return 1
                         ;;
                 esac
+                c='' # stev: reset $c
                 ;;
             P)	#!!! echo >&2 "!!! OPT='$OPT' OPTN='$OPTN' OPTARG='$OPTARG'"
                 if [ -n "$OPT" -a -z "$OPTN" ]; then
@@ -790,6 +817,8 @@ html-cref-test()
                             s=4 ;;
                         +|thread)
                             s=5 ;;
+                        cycles)
+                            s=6 ;;
                         -)	s=''
                             ;;
                         *)	error --long -i
@@ -856,7 +885,7 @@ html-cref-test()
     if [ "$s" == '+' ]; then
         s="$defs"
     elif [ -n "$s" ] && \
-         [ "$s" -lt 3 -o "$s" -gt 5 ]; then
+         [ "$s" -lt 3 -o "$s" -gt 6 ]; then
         error "internal: unexpected s='$s'"
         return 1
     fi
@@ -906,7 +935,29 @@ html-cref-test()
     }
     quote o
 
-    local c
+    [ "$act" == 'T' ] && {
+        { ./html-cref --help|grep -Fqe '-m|--timings'; } || {
+            error "'html-cref' wasn't built with TIMINGS=yes"
+            return 1
+        }
+    }
+    [ "$act" == 'T' -a -n "$c" ] && {
+        { ./html-cref --help|grep -Fqe '-c|--[clock-]cycles'; } || {
+            error "'html-cref' wasn't built with CYCLES=yes"
+            return 1
+        }
+    }
+
+    local y=3
+    [ "$act" == 'T' ] && {
+        { ./clocks --help|grep -Fqwe 'cycles'; } && (( y++ ))
+        [ -z "$c" -o "$y" -eq 4 ] || {
+            error "'clocks' wasn't built with CYCLES=yes"
+            return 1
+        }
+    }
+
+    local c2
     local a
     local a2
     local s2
@@ -916,37 +967,43 @@ html-cref-test()
     # stev: normalize $m
     [ "${#m[@]}" -eq 1 ] && m=($m $m $m)
 
+    [[ -z "$c" && "${m[@]}" != '- - -' ||
+       -n "$c" && "${m[@]}" == '- - -' ]] || {
+        error "internal: unexpected m=(${m[@]}) and c='$c'"
+        return 1
+    }
+    m[3]="${c:--}"
+
     [ "$act" == 'T' ] &&
-    a=(real process thread)
+    a=(real process thread cycles)
 
     [[ "$act" == 'T' && "${m[@]}" =~ \+ ]] && {
         a2=''
-        [[ "${m[@]}" != '+ + +' ]] &&
-        for ((k=0; k<3; k++)); do
+        for ((k=0; k<4; k++)); do
             [ "${m[$k]}" == '-' ] &&
             continue
             a2+="${a2:+ }${a[$k]}"
         done
         # stev: do not quote $a2 below
-        c="\
+        c2="\
 ./clocks${a2:+ $a2}|awk '{ print \$(NR + 2) }'"
 
         if [ "$x" == 'echo' ]; then
-            echo "$c"
-            m2=(1 2 3)
+            echo "$c2"
+            m2=(1 2 3 4)
         else
-            m2=($(set -o pipefail && eval "$c")) &&
-            [[ "${#m2[@]}" -eq 3 ]] || {
-                error "inner command failed: $c"
+            m2=($(set -o pipefail && eval "$c2")) &&
+            [[ "${#m2[@]}" -eq $y ]] || {
+                error "inner command failed: $c2"
                 return 1
             }
+            [[ "${#m2[@]}" -eq 3 ]] && m2[3]='-'
         fi
-        c=''
+        c2=''
     }
     [ "$act" == 'T' ] && {
         a2=''
-        [[ "${m[@]}" != '+ + +' ]] &&
-        for ((k=0; k<3; k++)); do
+        for ((k=0; k<4; k++)); do
             [ "${m[$k]}" == '-' ] &&
             continue
             a2+="${a2:+ }--${a[$k]}="
@@ -954,8 +1011,13 @@ html-cref-test()
             a2+="${m2[$k]}" ||
             a2+="${m[$k]}"
         done
-        [ -z "$a2" ] && m="${m2[@]}"
-        m="${a2:--m ${m// /,}}"
+        if [ -z "$a2" ]; then
+            [ -z "$c" ] &&
+            m="-m ${m2[0]},${m2[1]},${m2[2]}" ||
+            m="-c ${m2[3]}"
+        else
+            m="$a2"
+        fi
     }
 
     if [ "$act" == 'T' -a "${#t[@]}" -eq 1 ]; then
@@ -963,10 +1025,16 @@ html-cref-test()
             BEGIN {
                 C["real"] = 1
                 C["process"] = 2
-                C["thread"] = 3
+                C["thread"] = 3'
+        [ -n "$c" ] && a+='
+                C["cycles"] = 4
+                N = 4'
+        [ -z "$c" ] && a+='
+                N = 3'
+        a+='
             }
             {
-                if (!match($0, /^(real|process|thread)-timings:[ \t]*([^ \t]+)[ \t]*$/, a))
+                if (!match($0, /^('"${timc// /|}${c:+|cycles}"')-timings:[ \t]*([^ \t]+)[ \t]*$/, a))
                     print $0 > "/dev/stderr"
                 else {
                     i = C[a[1]]
@@ -975,33 +1043,43 @@ html-cref-test()
                 }
             }
             END {
-                printf("%s %s %s\n",
-                    A[1] ? V[1] : "-",
-                    A[2] ? V[2] : "-",
-                    A[3] ? V[3] : "-")
+                for (i = 1; i <= N; i ++) {
+                    printf("%s%s", \
+                        A[i] ? V[i] : "-", \
+                        i < N ? " " : "\n")
+                }
             }'
 
         (( w += 3 ))
-        a2='
-            function mean(t, v)
+        [ -z "$c" ] && a2='
+            BEGIN { N = 3 }'
+        [ -n "$c" ] && a2='
+            BEGIN { N = 4 }'
+        a2+='
+            function mean(i)
             {
-                return !t \
-                    ? sprintf("%'"$w"'.2f", v / FNR) \
+                return !E[i] \
+                    ? sprintf("%'"$w"'.2f", V[i] / FNR) \
                     : sprintf("%'"$w"'s", "-")
             }
             {
-                if ($1 != "-") x += $1; else a = 1
-                if ($2 != "-") y += $2; else b = 1
-                if ($3 != "-") z += $3; else c = 1
+                for (i = 1; i <= N; i ++) {
+                    if ($i != "-")
+                        V[i] += $i
+                    else
+                        E[i] = 1
+                }
             }
             END {
-                printf("%d %s %s %s\n", \
-                    FNR, mean(a, x), mean(b, y), mean(c, z))
+                printf("%d", FNR)
+                for (i = 1; i <= N; i ++)
+                    printf(" %s", mean(i))
+                printf("\n")
             }'
 
         # stev: need not quote $arg below
         # stev: do not quote $m below
-        c="\
+        c2="\
 r=$r
 set -o pipefail
 while [ \"\$((r --))\" -gt 0 ]; do
@@ -1012,7 +1090,7 @@ while [ \"\$((r --))\" -gt 0 ]; do
 done|
 awk '$a2'"
         [ -n "$o" ] &&
-        c+="|
+        c2+="|
 stdbuf -oL tee $o"
     elif [ "$act" == 'T' ]; then
         local k
@@ -1030,37 +1108,39 @@ stdbuf -oL tee $o"
         local w2="$w"
         [ "$w2" -eq "$defw" ] && w2=''
 
-        [ -n "$o" ] && c+="\
+        [ -n "$o" ] && c2+="\
 truncate -s0 $o"
         # stev: need not quote $t, $r2, $w2 below
         # stev: do not quote $m below
-        c+=${c:+$'\n'}"\
+        c2+=${c2:+$'\n'}"\
 time for t in ${t[@]}; do
     $self ${i:+-i $i }${r2:+-r $r2 }${w2:+-w $w2 }-o- -T \$t $m|
     sed -ru \"s/^/\$t:$p/;s/^(.{${#p}})\s*/\1/\""
-        [ -n "$o" ] && c+="|
+        [ -n "$o" ] && c2+="|
     stdbuf -oL tee -a $o"
-        c+='
+        c2+='
 done'
     elif [ "$act" == 'P' ]; then
         [ "$arg" == '+' ] && arg="$defP"
 
         a='
-            function record_group()
-            { G[p] = sprintf( \
-                "%3d %12.2f %12.2f %12.2f",
-                C[2], C[3], C[4], C[5]) }
-
+            function record_group(	r, i)
+            {
+                r = sprintf("%3d", C[1])
+                for (i = 2; i <= N; i ++)
+                    r = r sprintf(" %12.f", C[i])
+                G[p] = r
+            }
             {
                 if (p != $1) {
                     if (length(p))
                         record_group()
                     delete C
-                    N = 0
                     p = $1
                 }
-                for (i = 2; i <= 5; i ++)
-                    C[i] += $i
+                for (i = 1; i < NF; i ++)
+                    C[i] += $(i + 1)
+                N = NF - 1
             }
             END{
                 record_group()
@@ -1105,23 +1185,23 @@ done'
                 }
             }'
 
-        [ -n "$g" ] && c="\
+        [ -n "$g" ] && c2="\
 sort -k1,1 -s${i:+ $i}|
 awk '$a'|"$'\n'
-        c+="\
+        c2+="\
 awk '$a2'"
-        [ -z "$g" ] && c+="${i:+ \\
+        [ -z "$g" ] && c2+="${i:+ \\
 $i}"
-        [ -n "$s" ] && c+="|
+        [ -n "$s" ] && c2+="|
 sort -k${s}g,$s"
-        [ -z "$s" -a -n "$g" ] && c+='|
+        [ -z "$s" -a -n "$g" ] && c2+='|
 sort -k1,1'
     else
         error "internal: unexpected act='$act'"
         return 1
     fi
 
-    $x "$c"
+    $x "$c2"
 }
 
 git-repo-diff()

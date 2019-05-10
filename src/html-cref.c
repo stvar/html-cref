@@ -112,6 +112,17 @@ const char help[] =
 "                                `--{real,process,thread}-timings' are to\n"
 "                                be used to specify timings on subsets of\n"
 "                                the mentioned three clock types\n"
+#ifdef CLOCK_CYCLES
+"  -c|--[clock-]cycles[=NUM]   print out on stderr the total amount of\n"
+"                                CPU cycles spent by the HTML character\n"
+"                                reference parser (default do not); use\n"
+"                                the given number as the amount of CPU\n"
+"                                cycles of overhead per each instruction\n"
+"                                sequence querying the CPU for its time\n"
+"                                stamp counter; note that these options\n"
+"                                and `--{real,process,thread}-timings'\n"
+"                                are cancelling each other\n"
+#endif // CLOCK_CYCLES
 #endif // TIMINGS
 "  -w|--warnings[-only]        print out a warning message on stderr for\n"
 "     --no-warnings              each invalid HTML char reference found\n"
@@ -165,8 +176,13 @@ struct options_t
 #endif
     size_t       sponge_max;
 #ifdef TIMINGS
+#ifdef CLOCK_CYCLES
+    bits_t       timings: 4;
+    size_t       overhead[4];
+#else
     bits_t       timings: 3;
     size_t       overhead[3];
+#endif
 #endif
     bits_t       semicolons: 1;
     bits_t       warnings: 2;
@@ -411,7 +427,11 @@ static size_t options_parse_overheads_optarg(
 {
     size_t r;
 
+#ifdef CLOCK_CYCLES
+    ASSERT(n_vals == 4);
+#else
     ASSERT(n_vals == 3);
+#endif
 
     if (opt_arg == NULL) {
         memset(vals, 0,
@@ -421,12 +441,17 @@ static size_t options_parse_overheads_optarg(
 
     if (!su_size_parse_list(
             opt_arg, 0, 1000, ',',
-            vals, n_vals, NULL, NULL, &r))
+            vals, 3, NULL, NULL, &r))
         options_invalid_opt_arg(opt_name, opt_arg);
-    ASSERT(r <= n_vals);
+    ASSERT(r <= 3);
 
-    if (r < n_vals)
+    if (r < 3)
         options_illegal_opt_arg(opt_name, opt_arg);
+
+#ifdef CLOCK_CYCLES
+    STATIC(clock_type_cycles == 3);
+    vals[3] = 0;
+#endif
 
     return clock_types_all;
 }
@@ -435,7 +460,11 @@ static size_t options_parse_clock_overhead_optarg(
     size_t clock, const char* opt_name, const char* opt_arg,
     size_t* vals, size_t n_vals)
 {
+#ifdef CLOCK_CYCLES
+    ASSERT(n_vals == 4);
+#else
     ASSERT(n_vals == 3);
+#endif
     ASSERT(clock < 3);
 
     vals[clock] = opt_arg != NULL
@@ -443,8 +472,32 @@ static size_t options_parse_clock_overhead_optarg(
             0, 1000)
         : 0;
 
-    return 1U << clock;
+#ifdef CLOCK_CYCLES
+    STATIC(clock_type_cycles == 3);
+    vals[3] = 0;
+#endif
+
+    return CLOCK_BIT(clock);
 }
+
+#ifdef CLOCK_CYCLES
+static size_t options_parse_cycles_overhead_optarg(
+    size_t clock, const char* opt_name, const char* opt_arg,
+    size_t* vals, size_t n_vals)
+{
+    ASSERT(n_vals == 4);
+    ASSERT(clock == 3);
+
+    memset(vals, 0, SIZE_MUL(sizeof(*vals), n_vals - 1));
+
+    vals[clock] = opt_arg != NULL
+        ? options_parse_size_optarg(opt_name, opt_arg,
+            0, 1000)
+        : 0;
+
+    return CLOCK_BIT(clock);
+}
+#endif // CLOCK_CYCLES
 
 #endif // TIMINGS
 
@@ -475,6 +528,9 @@ static const struct options_t* options(
         semicolons_opt    = 'e',
 #ifdef TIMINGS
         timings_opt       = 'm',
+#ifdef CLOCK_CYCLES
+        clock_cycles_opt  = 'c',
+#endif
 #endif
         warnings_only_opt = 'w',
         help_opt          = '?',
@@ -509,6 +565,10 @@ static const struct options_t* options(
         { "process-timings", 2,       0, process_timings_opt },
         { "thread-timings",  2,       0, thread_timings_opt },
         { "no-timings",      0,       0, no_timings_opt },
+#ifdef CLOCK_CYCLES
+        { "clock-cycles",    2,       0, clock_cycles_opt },
+        { "cycles",          2,       0, clock_cycles_opt },
+#endif
 #endif
         { "warnings",        0,       0, warnings_opt },
         { "warnings-only",   0,       0, warnings_only_opt },
@@ -524,6 +584,9 @@ static const struct options_t* options(
 #endif
 #ifdef TIMINGS
         "m:"
+#ifdef CLOCK_CYCLES
+        "c:"
+#endif
 #endif
     ;
     struct bits_opts_t
@@ -609,17 +672,33 @@ static const struct options_t* options(
             opts.timings |= options_parse_clock_overhead_optarg(
                 clock_type_real, "real-timings", optarg,
                 opts.overhead, ARRAY_SIZE(opts.overhead));
+#ifdef CLOCK_CYCLES
+            opts.timings &= ~CLOCK_TYPE(cycles);
+#endif
             break;
         case process_timings_opt:
             opts.timings |= options_parse_clock_overhead_optarg(
                 clock_type_process, "process-timings", optarg,
                 opts.overhead, ARRAY_SIZE(opts.overhead));
+#ifdef CLOCK_CYCLES
+            opts.timings &= ~CLOCK_TYPE(cycles);
+#endif
             break;
         case thread_timings_opt:
             opts.timings |= options_parse_clock_overhead_optarg(
                 clock_type_thread, "thread-timings", optarg,
                 opts.overhead, ARRAY_SIZE(opts.overhead));
+#ifdef CLOCK_CYCLES
+            opts.timings &= ~CLOCK_TYPE(cycles);
+#endif
             break;
+#ifdef CLOCK_CYCLES
+        case clock_cycles_opt:
+            opts.timings = options_parse_cycles_overhead_optarg(
+                clock_type_cycles, "clock-cycles", optarg,
+                opts.overhead, ARRAY_SIZE(opts.overhead));
+            break;
+#endif
         case no_timings_opt:
             opts.timings = 0;
             break;
@@ -1358,8 +1437,13 @@ static void timings_adjust(
 {
     struct clocks_t o;
 
+#ifdef CLOCK_CYCLES
+    STATIC(
+        ARRAY_SIZE(opts->overhead) == 4);
+#else
     STATIC(
         ARRAY_SIZE(opts->overhead) == 3);
+#endif
     STATIC(
         SIZE_MAX <= CLOCKS_TIME_MAX);
 
@@ -1367,6 +1451,9 @@ static void timings_adjust(
     o.real = opts->overhead[0];
     o.process = opts->overhead[1];
     o.thread = opts->overhead[2];
+#ifdef CLOCK_CYCLES
+    o.cycles = opts->overhead[3];
+#endif
 
     clocks_adjust(
         &clocks, &o, process_cref_count);
