@@ -455,7 +455,7 @@ static const struct options_t* options(
         .action      = options_subst_cref_action,
         .input_type  = options_input_type_liner,
 #ifndef BUILTIN
-        .cref_parser = "ietrie",
+        .cref_parser = "etrie",
 #endif
         .sponge_max  = MB(5),
     };
