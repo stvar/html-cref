@@ -188,10 +188,6 @@ static void options_usage(void)
 
 #ifdef TIMINGS
 
-#undef  CLOCK_TYPES_HAS
-#define CLOCK_TYPES_HAS(t) \
-    CLOCK_TYPES_HAS_(opts->timings, t)
-
 static char* options_dump_timings(
     const struct options_t* opts)
 {
