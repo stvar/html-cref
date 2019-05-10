@@ -296,7 +296,10 @@ This latter binary is obtained as a result of a normal building of Html-Cref
 and it's used for producing clock timings overhead estimates that 'html-cref'
 uses for adjusting the timings measurements done.
 
-The result obtained from `-T|--test-set' is a table of which rows are of form:
+When an 'html-cref-test' command line contains one of the options `-m|--timings'
+or `--{real,process,thread}-timings' and none of the options `-c|--clock-cyles'
+after the rightmost such timings option, then the result obtained from action
+option `-T|--test-set' is a table of which rows are of form:
 
   NAME: COUNT REAL PROCESS THREAD
 
@@ -311,6 +314,17 @@ parser library named by 'NAME' inside the HTML named character references parser
 function that it implements. The real, process and thread nanoseconds values are
 computed using the library function `clock_gettime(3)' -- which is called on the
 clock ids 'CLOCK_{REALTIME,PROCESS_CPUTIME_ID,THREAD_CPUTIME_ID}' respectively.
+
+If an 'html-cref-test' command line contains the options `-c|--clock-cycles' and
+none of the options `-m|--timings' and `--{real,process,thread}-timings' after
+the rightmost such cycles option, then the result obtained from action option
+`-T|--test-set' is a table of which rows are of form:
+
+  NAME: COUNT - - - CYCLES
+
+where 'NAME' and 'COUNT are as described above and 'CYCLES' are mean values of
+the total amount of CPU instruction cycles spent by the parser library named by
+'NAME' inside the HTML named character references parser function it implements.
 
 The action options `-P|--percents' take as input a table obtained from action
 options `-T|--test-set' for to transform the nanoseconds values to percentage
