@@ -504,7 +504,7 @@ static const struct options_t* options(
         { "semicolons",      0,       0, semicolons_opt },
         { "no-semicolons",   0,       0, no_semicolons_opt },
 #ifdef TIMINGS
-        { "timings",         1,       0, timings_opt },
+        { "timings",         2,       0, timings_opt },
         { "real-timings",    2,       0, real_timings_opt },
         { "process-timings", 2,       0, process_timings_opt },
         { "thread-timings",  2,       0, thread_timings_opt },
