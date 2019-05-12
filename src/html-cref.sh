@@ -569,10 +569,11 @@ awk -F '\n' '{
 $self --cref-names"
         [ "$j" != "$json" ] && c2+=" -j $j"
 
-        [ -n "$e" ] && e='e' || e='f'
+        local e2
+        [ -n "$e" ] && e2='e' || e2='f'
 
         c2+="|
-gen-func ${o:+$o }-r- -P$e -z -e-1${w:+ -w}"
+gen-func ${o:+$o }-r- -P$e2 -z -e-1${w:+ -w}"
 
         [ -z "$a" ] && {
             c3="$self --gen-map-table --list"
