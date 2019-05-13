@@ -193,8 +193,16 @@ struct options_t
 
 static void options_version(void)
 {
-    fprintf(stdout, "%s: version %s\n\n%s",
-        program, verdate, license);
+    fprintf(stdout,
+#ifdef BUILTIN
+        "%s: version %s\n"
+        "%s: BUILTIN=" STRINGIFY(BUILTIN) "\n\n%s",
+        program, verdate, program,
+#else
+        "%s: version %s\n\n%s",
+        program, verdate,
+#endif
+        license);
 }
 
 static void options_usage(void)
