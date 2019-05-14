@@ -121,7 +121,7 @@ Note that any user's explicit invocation of these 'bash' test scripts must be
 initiated from within the 'test' directory.
 
 A common scenario is for one to have Html-Cref built in three steps. Firstly, do
-built the program along with external parser modules, enabling the timings code
+build the program along with external parser modules, enabling the timings code
 within each of these modules:
 
   $ make OPT=3 TIMINGS=yes
@@ -261,8 +261,8 @@ The command line options of 'html-cref-test' are as shown below:
                                      stdout
     -r|--repeat=NUM                number of times to repeat the 'html-cref'
                                      command (default: 100)
-    -m:|--timings[=NUM,NUM,NUM]    pass `-m|--timings=NUM,NUM,NUM' or, by case,
-        --real[-timings][=NUM]       `--{real,process,thread}-timings=NUM' to
+    -m:|--timings[=NUM,NUM,NUM]    pass `-m|--timings[=NUM,NUM,NUM]' or, by case,
+        --real[-timings][=NUM]       `--{real,process,thread}-timings[=NUM]' to
         --process[-timings][=NUM]    'html-cref'; the default NUM is '+', i.e.
         --thread[-timings][=NUM]     query that number from 'clocks'
     -c|--[clock-]cycles[=NUM]      pass `-c|--clock-cycles[=NUM]' to 'html-cref'
