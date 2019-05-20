@@ -340,8 +340,9 @@ html-cref-gen()
 {
     local self="html-cref-gen"
     local json="html-mathml.json"
+    local over="html-cref-overrides.txt"
     local gent="@(sub|map)-table"
-    local genx="@($gent|func|re2c-def)"
+    local genx="@($gent|func|re2c-def|cref-overrides)"
     local geno="gen-$genx"
 
     local x="eval"
@@ -353,15 +354,17 @@ html-cref-gen()
                     #   G: generate SUB table (--gen-sub-table)|
                     #   G: generate MAP table (--gen-map-table)|
                     #   G: generate RE2C def text (--gen-re2c-def)|
-                    #   G: generate trie lookup/parse function (--gen-func)
+                    #   G: generate trie lookup/parse function (--gen-func)|
+                    #   G: generate char ref overrides table (--gen-cref-overrides)
     local a=""      # when action is `-G|--gen-func' do not adjust the generated trie function (--no-adjust-func)
     local e=""      # when action is `-G|--gen-func' pass `-Pe' to 'gen-func' instead of `-Pf' (--expanded-path)
-    local h=""      # when action is `-G|--gen-func' generate a heading comment text (--heading[-comment])
+    local h=""      # when action is `-G|--gen-*' generate a heading comment text (--heading[-comment])
     local i=""      # when action is `-G|--gen-func' generate code that uses indexed access into the input string instead of pointer arithmetic (--indexed-access)
     local j="+"     # input HTML mathml JSON file (default: `html-mathml.json') (--mathml-json=FILE)
     local l=""      # when action is `-O|--cref-names-semicolon' or `-G|--gen-map-table' produce a comma-separated list instead of a table (--list)
     local m=""      # when action is `-G|--gen-func' apply only mapping to the generated trie function (--map-only)
     local n=""      # when action is `-G|--gen-func' generate code for processing semicolon-terminated input (--semicolon)
+    local o="+"     # input HTML char ref overrides file (default: `html-cref-overrides.txt') (--cref-overrides=FILE)
     local s=""      # when action is `-G|--gen-func' make the generated trie function 'static' (--static-func)
     local w=""      # when action is `-G|--gen-func' pass `-w|--wide-code' to 'gen-func' (--wide-code)
 
@@ -370,7 +373,7 @@ html-cref-gen()
     local opt
     local OPT
     local OPTN
-    local opts=":adeG:hij:lmMnNOsSwx-:"
+    local opts=":adeG:hij:lmMnNo:OsSwx-:"
     local OPTARG
     local OPTERR=0
     local OPTIND=1
@@ -403,6 +406,8 @@ html-cref-gen()
                 opt='n' ;;
             cref-names)
                 opt='N' ;;
+            cref-overrides)
+                opt='o' ;;
             cref-names-semicolon)
                 opt='O' ;;
             static-func)
@@ -433,7 +438,7 @@ html-cref-gen()
             [aehilmnsw])
                 optopt
                 ;;
-            [j])
+            [jo])
                 optarg
                 ;;
             G)	[[ -n "$OPT" || "$OPTARG" == $genx ]] || {
@@ -463,36 +468,48 @@ html-cref-gen()
     done
     shift $((OPTIND - 1))
 
-    [ "$j" == '+' ] && j="$json"
-    if [ -z "$j" ]; then
-        error "mathml JSON file name is null"
-        return 1
-    elif [ ! -f "$j" ]; then
-        error "mathml JSON file '$j' not found"
-        return 1
+    if [ "$act$arg" != 'Gcref-overrides' ]; then
+        [ "$j" == '+' ] && j="$json"
+        if [ -z "$j" ]; then
+            error "mathml JSON file name is null"
+            return 1
+        elif [ ! -f "$j" ]; then
+            error "mathml JSON file '$j' not found"
+            return 1
+        fi
+        quote j
+    else
+        [ "$o" == '+' ] && o="$over"
+        if [ -z "$o" ]; then
+            error "char ref overrides file name is null"
+            return 1
+        elif [ ! -f "$o" ]; then
+            error "char ref overrides file '$o' not found"
+            return 1
+        fi
+        quote o
     fi
-    quote j
 
     local c2
     local c3
     local s2
     local s3
-    local o
     local o2
+    local o3
 
     [ "$act" == 'G' -a -n "$h" ] && {
         while [ "$#" -gt 0 ]; do
             if [ -z "$1" ]; then
-                o2="''"
+                o3="''"
             else
-                o2="$1"
-                quote o2
-                [ "$o2" != "$1" ] && {
-                    o2="$1"
-                    quote2 o2
+                o3="$1"
+                quote o3
+                [ "$o3" != "$1" ] && {
+                    o3="$1"
+                    quote2 o3
                 }
             fi
-            o+="${o:+ }$o2"
+            o2+="${o2:+ }$o3"
             shift
         done
     }
@@ -540,13 +557,13 @@ awk -f html-cref.awk -v act=gen-$arg"
             [ "$j" != "$json" ] && c3+=" -j $j"
 
             [ "$x" == 'echo' ] && echo "$c3"
-            o2="$(eval "$c3")" && [ -n "$o2" ] || {
+            o3="$(eval "$c3")" && [ -n "$o3" ] || {
                 error "inner command failed: $c3"
                 return 1
             }
-            quote2 o2
+            quote2 o3
 
-            c2+=" -v opt=$o2"
+            c2+=" -v opt=$o3"
         }
 
         [ "$act$arg" == 'Gmap-table' -a -n "$l" ] && c2+='|
@@ -573,18 +590,18 @@ $self --cref-names"
         [ -n "$e" ] && e2='e' || e2='f'
 
         c2+="|
-gen-func ${o:+$o }-r- -P$e2 -z -e-1${w:+ -w}"
+gen-func ${o2:+$o2 }-r- -P$e2 -z -e-1${w:+ -w}"
 
         [ -z "$a" ] && {
             c3="$self --gen-map-table --list"
             [ "$j" != "$json" ] && c3+=" -j $j"
 
             [ "$x" == 'echo' ] && echo "$c3"
-            o2="$(eval "$c3")" && [ -n "$o2" ] || {
+            o3="$(eval "$c3")" && [ -n "$o3" ] || {
                 error "inner command failed: $c3"
                 return 1
             }
-            quote2 o2
+            quote2 o3
         }
 
         [ -z "$a" ] && c2+="|
@@ -598,7 +615,11 @@ awk -F '\n' -f gen-func-adjust.awk"
         [ -z "$a" -a -n "$m" ] &&
         c2+=' -v map_only=1'
         [ -z "$a" ] &&
-        c2+=" -v map=$o2"
+        c2+=" -v map=$o3"
+    elif [ "$act$arg" == 'Gcref-overrides' ]; then
+        c2="\
+awk '{ printf(\"\t[0x%02x] = 0x%04x,\n\", strtonum(\$1) - 0x80, strtonum(\$2)) }' \\
+$o"
     else
         error "unexpected act='$act'${arg:+ arg='$arg'}"
         return 1
@@ -623,8 +644,8 @@ awk -F '\n' -f gen-func-adjust.awk"
         h+=' --static-func'
         [ -z "$a" -a -n "$w" ] &&
         h+=' --wide-code'
-        [ -n "$o" ] &&
-        h+=" -- $o"
+        [ -n "$o2" ] &&
+        h+=" -- $o2"
 
         quote2 -i h
 

@@ -43,6 +43,12 @@
 #define ISXDIGIT CHAR_IS_XDIGIT
 #define ISDIGIT  CHAR_IS_DIGIT
 
+// $ html-cref-gen --gen-cref-overrides --heading > html-cref-overrides-impl.h
+
+static const uint16_t html_cref_overrides[] = {
+#include "html-cref-overrides-impl.h"
+};
+
 // HTML Living Standard
 // 12 The HTML syntax
 // 12.1 Writing HTML documents
@@ -122,9 +128,20 @@ bool html_cref_unicode_parse_html(
         v != ' ')
         return false; 
 
-    // not in range U+007F to U+009F, inclusive
-    if (v >= 0x7fu && v <= 0x9fu)
+    // not in range U+007F to U+009F, inclusive, but
+    // allow char reference overrides, according to
+    // https://html.spec.whatwg.org/multipage/parsing.html
+    // #numeric-character-reference-end-state
+    if (v == 0x7fu)
         return false;
+    if (v >= 0x80u && v <= 0x9fu) {
+        STATIC(ARRAY_SIZE(html_cref_overrides) == 0x20u);
+
+        if ((v = html_cref_overrides[v - 0x80u]))
+            goto ret_code;
+
+        return false;
+    }
 
     // not in range U+FDD0 to U+FDEF, inclusive
     if (v >= 0xfdd0u && v <= 0xfdefu)
@@ -136,6 +153,7 @@ bool html_cref_unicode_parse_html(
         ((v >> 0x10u) <= 0x10u))
         return false;
 
+ret_code:
     *r = v;
     return true;
 }

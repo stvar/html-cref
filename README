@@ -46,7 +46,8 @@ Html-Cref is implementing several fast HTML character references parsers based
 on two meta-tools: Trie-Gen [5] and RE2C [4]. The parsing and decoding of HTML
 character references follow carefully the HTML standard specification, handling
 properly those named references that, for historical reasons, are allowed to not
-be terminated with semicolon [1b].
+be terminated with semicolon [1b]; also handling properly the numeric character
+references that are permitted to be overriden as per the specification [1c, 1d].
 
 Html-Cref produces output encoded in UTF-8 that is conforming to the Unicode
 Standard v12.0.0 [2], handling correctly both BMP and non-BMP (the so-called
@@ -63,7 +64,17 @@ builds Html-Cref cleanly.
 
 Note that the two meta-tools mentioned in section 1 (Trie-Gen and RE2C) are not
 needed for building Html-Cref. All the C code that these programs generated is
-included within the source tree in the files 'src/html-cref-!(table)-impl.h'.
+included within the source tree in the files:
+
+  $ ls -1 src/html-cref-!(overrides|table)-impl.h
+  src/html-cref-bre2c-impl.h
+  src/html-cref-etrie-impl.h
+  src/html-cref-ietrie-impl.h
+  src/html-cref-itrie-impl.h
+  src/html-cref-iwtrie-impl.h
+  src/html-cref-re2c-impl.h
+  src/html-cref-trie-impl.h
+  src/html-cref-wtrie-impl.h
 
 Html-Cref is supposed to be built in two distinct ways -- determined by specific
 arguments passed to the 'make' program. The first way is to have each HTML named
@@ -415,6 +426,12 @@ Internet Resources:
 
     (b) 12.2 Parsing HTML documents: 12.2.5.73 Named character reference state
     https://html.spec.whatwg.org/multipage/parsing.html#named-character-reference-state
+
+    (c) 12.2 Parsing HTML documents: 12.2.5.80 Numeric character reference end state
+    https://html.spec.whatwg.org/multipage/parsing.html#numeric-character-reference-end-state
+
+    (d) 12.2 Parsing HTML documents: Table of numeric character reference overrides 
+    https://html.spec.whatwg.org/multipage/parsing.html#table-charref-overrides
 
 [2] The Unicode Standard Version 12.0 -- Core Specification
     Chapter 3: 3.9 Unicode Encoding Forms: UTF-8, p. 125
