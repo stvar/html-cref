@@ -497,7 +497,7 @@ html-cref-gen()
     local o2
     local o3
 
-    [ "$act" == 'G' -a -n "$h" ] && {
+    [ "$act" == 'G' -a \( "$arg" == 'func' -o -n "$h" \) ] && {
         while [ "$#" -gt 0 ]; do
             if [ -z "$1" ]; then
                 o3="''"
