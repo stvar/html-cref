@@ -928,7 +928,7 @@ html-cref-test()
         t=($tstl)
     }
 
-    [ "${#t[@]}" -gt 0 ] || {
+    [ "$act" != 'T' -o "${#t[@]}" -gt 0 ] || {
         error "internal: unexpected \${#t[@]}='${#t[@]}'"
         return 1
     } 
