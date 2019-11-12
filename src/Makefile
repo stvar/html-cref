@@ -120,7 +120,7 @@ endif
 # building rules
 
 ${BIN}:
-	${GCC} ${CFLAGS} -ldl ${SRCS} -o $@
+	${GCC} ${CFLAGS} -Wl,--dynamic-list=html-cref.ld -ldl ${SRCS} -o $@
 
 ${MODS}: %.so: %.c
 	${GCC} ${CFLAGS} -DHTML_CREF_MODULE -lrt -shared $^ -o $@ 
